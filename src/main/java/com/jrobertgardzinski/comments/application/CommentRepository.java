@@ -12,6 +12,11 @@ public interface CommentRepository {
 
     List<Comment> findByMeme(String memeId);
 
+    /** One page of a meme's comments, oldest first (offset/limit); pairs with {@link #countByMeme}. */
+    List<Comment> findByMeme(String memeId, int offset, int limit);
+
+    int countByMeme(String memeId);
+
     Optional<Comment> find(String commentId);
 
     List<Comment> findByAuthor(String author);

@@ -1,8 +1,11 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.AddComment;
+import com.jrobertgardzinski.comments.application.CommentWithScore;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
+import com.jrobertgardzinski.comments.config.RateLimit;
+import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
 import org.springframework.http.HttpStatus;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,14 +39,21 @@ class CommentController {
     /** What a client posts to vote: {@code direction} is UP or DOWN (case-insensitive). */
     record VoteRequest(String direction) {}
 
+    /** Server policy: a thread page is at most this many comments. */
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int DEFAULT_PAGE_SIZE = 50;
+
     private final AddComment addComment;
     private final ListComments listComments;
     private final VoteOnComment voteOnComment;
+    private final RateLimit commentRate;
 
-    CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment) {
+    CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment,
+                      RateLimit commentRate) {
         this.addComment = addComment;
         this.listComments = listComments;
         this.voteOnComment = voteOnComment;
+        this.commentRate = commentRate;
     }
 
     @PostMapping
@@ -52,6 +63,14 @@ class CommentController {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("status", "INVALID_COMMENT"));
         }
+        if (request.text().length() > Comment.MAX_LENGTH) {
+            return ResponseEntity.badRequest().body(Map.of("status", "COMMENT_TOO_LONG",
+                    "maxLength", Comment.MAX_LENGTH));
+        }
+        if (!commentRate.tryAcquire(author)) {
+            return ResponseEntity.status(429).header("Retry-After", "60")
+                    .body(Map.of("status", "RATE_LIMITED", "detail", "you are commenting too fast"));
+        }
         return addComment.execute(memeId, author, request.text())
                 .<ResponseEntity<?>>map(comment ->
                         ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", comment.id())))
@@ -60,19 +79,24 @@ class CommentController {
 
     @GetMapping
     List<Map<String, Object>> list(@PathVariable("memeId") String memeId,
+                                   @RequestParam(name = "page", defaultValue = "0") int page,
+                                   @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
                                    @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER,
                                            required = false) String viewer) {
-        return listComments.execute(memeId, Optional.ofNullable(viewer)).stream()
-                .map(entry -> {
-                    Map<String, Object> body = new HashMap<>();
-                    body.put("id", entry.comment().id());
-                    body.put("author", entry.comment().author());
-                    body.put("text", entry.comment().text());
-                    body.put("score", entry.tally().score());
-                    body.put("myVote", entry.tally().voterChoice().map(Enum::name).orElse(null));
-                    return body;
-                })
-                .toList();
+        int limit = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
+        int offset = Math.max(0, page) * limit;
+        return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
+                .comments().stream().map(CommentController::toBody).toList();
+    }
+
+    private static Map<String, Object> toBody(CommentWithScore entry) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("id", entry.comment().id());
+        body.put("author", entry.comment().author());
+        body.put("text", entry.comment().text());
+        body.put("score", entry.tally().score());
+        body.put("myVote", entry.tally().voterChoice().map(Enum::name).orElse(null));
+        return body;
     }
 
     @PostMapping("/{commentId}/votes")

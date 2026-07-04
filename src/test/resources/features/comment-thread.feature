@@ -25,6 +25,21 @@ Feature: Comment threads under memes
     And the same second user up-votes it again
     Then the thread shows that comment with a score of 1
 
+  Scenario: a long thread is read one page at a time
+    Given a signed-in user
+    And 5 comments under the known meme
+    When she reads page 0 of size 2 of the thread
+    Then 2 comments are returned
+    When she reads page 2 of size 2 of the thread
+    Then 1 comment is returned
+
+  Scenario: an essay is refused; a remark is accepted
+    Given a signed-in user
+    When she posts a comment of 2001 characters under the known meme
+    Then the comment is refused as too long
+    When she posts a comment of 2000 characters under the known meme
+    Then the comment is accepted
+
   Scenario: a deleted meme takes its whole thread with it
     Given a signed-in user
     And her comment "Znikne razem z memem" under the known meme

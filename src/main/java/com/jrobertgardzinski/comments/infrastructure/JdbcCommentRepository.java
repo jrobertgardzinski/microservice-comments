@@ -34,6 +34,19 @@ class JdbcCommentRepository implements CommentRepository {
     }
 
     @Override
+    public List<Comment> findByMeme(String memeId, int offset, int limit) {
+        return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE meme_id = ? "
+                        + "ORDER BY created_at LIMIT ? OFFSET ?")
+                .params(memeId, limit, offset).query(this::toComment).list();
+    }
+
+    @Override
+    public int countByMeme(String memeId) {
+        return jdbc.sql("SELECT COUNT(*) FROM comments WHERE meme_id = ?")
+                .param(memeId).query((rs, n) -> rs.getInt(1)).single();
+    }
+
+    @Override
     public Optional<Comment> find(String commentId) {
         return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE id = ?")
                 .param(commentId).query(this::toComment).optional();

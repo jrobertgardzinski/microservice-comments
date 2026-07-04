@@ -18,4 +18,10 @@ Tylko otwarte rzeczy. Historia = git log.
   malutką libkę, jeśli urośnie trzeci konsument.
 - **Deduplikacja konsumenta** — purge idempotentny, więc zbędna; przy nie-idempotentnych
   komendach dołożyć dedup po id.
-- Paginacja/limity długości wątków; rate-limit.
+- ~~Paginacja / limity długości wątków / rate-limit~~ — ZROBIONE (2026-07-04): listing
+  stronicowany (`GET ...?page=&size=`, size cap 100, domyślnie 50; port findByMeme(offset,limit)
+  + countByMeme; `ListComments.Page` z hasMore), limit długości komentarza w DOMENIE
+  (`Comment.MAX_LENGTH=2000`, boundary → 400 COMMENT_TOO_LONG), rate-limit per-autor
+  (`RateLimit` w config, env COMMENT_RATE_LIMIT, default 20/min, 429+Retry-After).
+  Kontrakt GET wstecznie zgodny (płaska lista = strona 0). 2 nowe scenariusze Gherkin +
+  RateLimitTest; wszystko zielone.

@@ -9,6 +9,7 @@ import com.jrobertgardzinski.comments.application.MemeDirectory;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
 import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.comments.config.RateLimit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +26,11 @@ class CommentsConfig {
     @Bean
     AddComment addComment(MemeDirectory memeDirectory, CommentRepository commentRepository) {
         return new AddComment(memeDirectory, commentRepository);
+    }
+
+    @Bean
+    RateLimit commentRate(@Value("${comments.rate-limit.per-minute:20}") int perMinute) {
+        return new RateLimit(perMinute);
     }
 
     @Bean

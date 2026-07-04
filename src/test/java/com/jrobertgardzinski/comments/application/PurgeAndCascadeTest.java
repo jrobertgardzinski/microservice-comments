@@ -34,6 +34,14 @@ class PurgeAndCascadeTest {
             return comments.stream().filter(c -> c.memeId().equals(memeId)).toList();
         }
 
+        public List<Comment> findByMeme(String memeId, int offset, int limit) {
+            return findByMeme(memeId).stream().skip(offset).limit(limit).toList();
+        }
+
+        public int countByMeme(String memeId) {
+            return findByMeme(memeId).size();
+        }
+
         public Optional<Comment> find(String commentId) {
             return comments.stream().filter(c -> c.id().equals(commentId)).findFirst();
         }

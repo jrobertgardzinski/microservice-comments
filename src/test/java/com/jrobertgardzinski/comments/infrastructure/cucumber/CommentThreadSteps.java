@@ -123,6 +123,50 @@ public class CommentThreadSteps {
                 "the cascade took the whole thread with the meme");
     }
 
+    private Response lastPage;
+
+    @io.cucumber.java.en.Given("{int} comments under the known meme")
+    public void manyComments(int count) {
+        for (int i = 0; i < count; i++) {
+            assertEquals(201, comment(TestAuthConfig.VALID_TOKEN, TestAuthConfig.EXISTING_MEME,
+                    "comment " + i).statusCode());
+        }
+    }
+
+    @When("she reads page {int} of size {int} of the thread")
+    public void readsPage(int page, int size) {
+        lastPage = RestAssured.given().port(port)
+                .queryParam("page", page).queryParam("size", size)
+                .get("/memes/{memeId}/comments", TestAuthConfig.EXISTING_MEME);
+    }
+
+    @Then("{int} comments are returned")
+    public void commentsReturned(int expected) {
+        assertEquals(expected, lastPage.jsonPath().getList("id").size());
+    }
+
+    @Then("{int} comment is returned")
+    public void commentReturned(int expected) {
+        assertEquals(expected, lastPage.jsonPath().getList("id").size());
+    }
+
+    @When("she posts a comment of {int} characters under the known meme")
+    public void postsComment(int length) {
+        lastResponse = comment(TestAuthConfig.VALID_TOKEN, TestAuthConfig.EXISTING_MEME,
+                "x".repeat(length));
+    }
+
+    @Then("the comment is refused as too long")
+    public void refusedAsTooLong() {
+        assertEquals(400, lastResponse.statusCode());
+        assertEquals("COMMENT_TOO_LONG", lastResponse.jsonPath().getString("status"));
+    }
+
+    @Then("the comment is accepted")
+    public void commentAccepted() {
+        assertEquals(201, lastResponse.statusCode());
+    }
+
     private Response comment(String token, String meme, String text) {
         return RestAssured.given().port(port)
                 .header("Authorization", "Bearer " + token)
