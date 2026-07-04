@@ -167,6 +167,36 @@ public class CommentThreadSteps {
         assertEquals(201, lastResponse.statusCode());
     }
 
+    @When("she deletes that comment")
+    public void sheDeletes() {
+        lastResponse = deleteComment(TestAuthConfig.VALID_TOKEN);
+        assertEquals(200, lastResponse.statusCode());
+    }
+
+    @When("{string} tries to delete that comment")
+    public void strangerDeletes(String who) {
+        lastResponse = deleteComment(TestAuthConfig.SECOND_TOKEN);
+    }
+
+    @When("a moderator deletes that comment")
+    public void moderatorDeletes() {
+        lastResponse = deleteComment(TestAuthConfig.MODERATOR_TOKEN);
+        assertEquals(200, lastResponse.statusCode());
+        assertEquals("MODERATOR", lastResponse.jsonPath().getString("by"));
+    }
+
+    @Then("the deletion is refused as not-theirs")
+    public void deletionRefused() {
+        assertEquals(403, lastResponse.statusCode());
+        assertEquals("NOT_YOURS", lastResponse.jsonPath().getString("status"));
+    }
+
+    private Response deleteComment(String token) {
+        return RestAssured.given().port(port)
+                .header("Authorization", "Bearer " + token)
+                .delete("/memes/{memeId}/comments/{commentId}", TestAuthConfig.EXISTING_MEME, commentId);
+    }
+
     private Response comment(String token, String meme, String text) {
         return RestAssured.given().port(port)
                 .header("Authorization", "Bearer " + token)

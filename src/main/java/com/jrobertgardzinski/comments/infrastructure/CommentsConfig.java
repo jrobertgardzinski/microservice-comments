@@ -3,6 +3,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.jrobertgardzinski.comments.application.AddComment;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.application.CommentVotes;
+import com.jrobertgardzinski.comments.application.DeleteComment;
 import com.jrobertgardzinski.comments.application.DeleteThread;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.application.MemeDirectory;
@@ -31,6 +32,11 @@ class CommentsConfig {
     @Bean
     RateLimit commentRate(@Value("${comments.rate-limit.per-minute:20}") int perMinute) {
         return new RateLimit(perMinute);
+    }
+
+    @Bean
+    DeleteComment deleteComment(CommentRepository commentRepository, CommentVotes commentVotes) {
+        return new DeleteComment(commentRepository, commentVotes);
     }
 
     @Bean

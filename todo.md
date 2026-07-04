@@ -9,6 +9,12 @@ Tylko otwarte rzeczy. Historia = git log.
   wybór z wizarda nadpisuje default), potwierdzenie na `comments-events`.
 - Kaskada `MEME_DELETED` → wątek znika razem z memem.
 
+## Zrobione (cd.)
+- **Moderacja komentarzy (MODERATOR)** — ZROBIONE (2026-07-04): brama czyta role z /me security
+  (Caller{email,roles}), DELETE /memes/{memeId}/comments/{commentId} — autor swój, MODERATOR/ADMIN
+  cudzy; DeleteComment autoryzuje (DELETED/FORBIDDEN/NO_SUCH_COMMENT) i kasuje komentarz+głosy.
+  2 scenariusze Gherkin.
+
 ## Otwarte
 - ~~Cucumber + Allure jak w pozostałych~~ — ZROBIONE (2026-07-04): `comment-thread.feature`
   (5 scenariuszy po HTTP: komentarz zalogowanego, odmowa anonima, odmowa pod nieznanym memem,

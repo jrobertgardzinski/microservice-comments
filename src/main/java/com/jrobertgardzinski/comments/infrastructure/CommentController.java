@@ -2,6 +2,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.AddComment;
 import com.jrobertgardzinski.comments.application.CommentWithScore;
+import com.jrobertgardzinski.comments.application.DeleteComment;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
 import com.jrobertgardzinski.comments.config.RateLimit;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,13 +48,15 @@ class CommentController {
     private final AddComment addComment;
     private final ListComments listComments;
     private final VoteOnComment voteOnComment;
+    private final DeleteComment deleteComment;
     private final RateLimit commentRate;
 
     CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment,
-                      RateLimit commentRate) {
+                      DeleteComment deleteComment, RateLimit commentRate) {
         this.addComment = addComment;
         this.listComments = listComments;
         this.voteOnComment = voteOnComment;
+        this.deleteComment = deleteComment;
         this.commentRate = commentRate;
     }
 
@@ -116,6 +120,24 @@ class CommentController {
         body.put("score", tally.get().score());
         body.put("myVote", tally.get().voterChoice().map(Enum::name).orElse(null));
         return ResponseEntity.ok(body);
+    }
+
+    /** Remove a comment: its author may remove their own, a MODERATOR may remove anyone's. */
+    @DeleteMapping("/{commentId}")
+    ResponseEntity<?> delete(@PathVariable("memeId") String memeId,
+                             @PathVariable("commentId") String commentId,
+                             @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String caller,
+                             @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
+                                     required = false) java.util.Set<String> roles) {
+        boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
+        DeleteComment.Result result = deleteComment.execute(commentId, caller, moderator);
+        return switch (result.status()) {
+            case DELETED -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
+                    "by", result.byModerator() ? "MODERATOR" : "AUTHOR"));
+            case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_YOURS",
+                    "detail", "only the author or a moderator can delete this comment"));
+            case NO_SUCH_COMMENT -> ResponseEntity.notFound().build();
+        };
     }
 
     private static Optional<VoteDirection> parseDirection(VoteRequest request) {

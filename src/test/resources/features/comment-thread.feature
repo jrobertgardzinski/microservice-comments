@@ -44,6 +44,20 @@ Feature: Comment threads under memes
     When she posts a comment of 2000 characters under the known meme
     Then the comment is accepted
 
+  Scenario: the author deletes their own COMMENT; a stranger cannot
+    Given a signed-in user
+    And her comment "Skasuje sam" under the known meme
+    When "bob" tries to delete that comment
+    Then the deletion is refused as not-theirs
+    When she deletes that comment
+    Then the thread of the known meme is empty
+
+  Scenario: a moderator deletes someone else's COMMENT
+    Given a signed-in user
+    And her comment "Ktos to zdejmie" under the known meme
+    When a moderator deletes that comment
+    Then the thread of the known meme is empty
+
   Scenario: a deleted meme takes its whole thread with it
     Given a signed-in user
     And her comment "Znikne razem z memem" under the known meme

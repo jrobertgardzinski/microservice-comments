@@ -9,6 +9,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Reading comments is public, writing requires signing in: every POST must carry a bearer token
@@ -21,6 +22,7 @@ import java.util.Optional;
 class RequireSignInFilter extends OncePerRequestFilter {
 
     static final String AUTHENTICATED_USER = "authenticatedUser";
+    static final String AUTHENTICATED_ROLES = "authenticatedRoles";
 
     private final SecurityAuthenticationGate gate;
 
@@ -35,9 +37,13 @@ class RequireSignInFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        Optional<String> user = bearerToken(request).flatMap(gate::emailFor);
-        user.ifPresent(email -> request.setAttribute(AUTHENTICATED_USER, email));
-        if ("POST".equals(request.getMethod()) && user.isEmpty()) {
+        Optional<Caller> caller = bearerToken(request).flatMap(gate::callerFor);
+        caller.ifPresent(c -> {
+            request.setAttribute(AUTHENTICATED_USER, c.email());
+            request.setAttribute(AUTHENTICATED_ROLES, c.roles());
+        });
+        boolean write = Set.of("POST", "PUT", "DELETE", "PATCH").contains(request.getMethod());
+        if (write && caller.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write("{\"status\":\"SIGN_IN_REQUIRED\"}");

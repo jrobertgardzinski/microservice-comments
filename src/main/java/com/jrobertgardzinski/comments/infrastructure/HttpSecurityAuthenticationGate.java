@@ -6,8 +6,11 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.slf4j.MDC;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Production gate: asks security's protected {@code GET /me} who the token belongs to. */
 @Component
@@ -20,14 +23,21 @@ class HttpSecurityAuthenticationGate implements SecurityAuthenticationGate {
     }
 
     @Override
-    public Optional<String> emailFor(String accessToken) {
+    public Optional<Caller> callerFor(String accessToken) {
         try {
             String cid = MDC.get("cid");
             Map<?, ?> body = securityService.get().uri("/me")
                     .header("Authorization", "Bearer " + accessToken)
                     .headers(h -> { if (cid != null) h.add("X-Correlation-Id", cid); })   // trace across services
                     .retrieve().body(Map.class);
-            return Optional.ofNullable(body == null ? null : (String) body.get("email"));
+            String email = body == null ? null : (String) body.get("email");
+            if (email == null) {
+                return Optional.empty();
+            }
+            Set<String> roles = body.get("roles") instanceof Collection<?> raw
+                    ? raw.stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet())
+                    : Set.of("USER");
+            return Optional.of(new Caller(email, roles));
         } catch (RestClientException invalidTokenOrServiceDown) {
             return Optional.empty();
         }

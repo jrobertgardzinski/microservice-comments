@@ -23,14 +23,19 @@ public class TestAuthConfig {
     public static final String SIGNED_IN_USER = "alice@example.com";
     public static final String SECOND_TOKEN = "test-token-bob";
     public static final String SECOND_USER = "bob@example.com";
+    public static final String MODERATOR_TOKEN = "test-token-mod";
+    public static final String MODERATOR_USER = "mod@example.com";
     public static final String EXISTING_MEME = "known-meme";
 
     @Bean
     @Primary
     SecurityAuthenticationGate stubSecurityAuthenticationGate() {
-        return token -> VALID_TOKEN.equals(token) ? Optional.of(SIGNED_IN_USER)
-                : SECOND_TOKEN.equals(token) ? Optional.of(SECOND_USER)
-                : Optional.empty();
+        return token -> switch (token == null ? "" : token) {
+            case VALID_TOKEN -> Optional.of(new Caller(SIGNED_IN_USER, Set.of("USER")));
+            case SECOND_TOKEN -> Optional.of(new Caller(SECOND_USER, Set.of("USER")));
+            case MODERATOR_TOKEN -> Optional.of(new Caller(MODERATOR_USER, Set.of("USER", "MODERATOR")));
+            default -> Optional.empty();
+        };
     }
 
     @Bean
