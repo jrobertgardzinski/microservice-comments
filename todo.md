@@ -10,7 +10,10 @@ Tylko otwarte rzeczy. Historia = git log.
 - Kaskada `MEME_DELETED` → wątek znika razem z memem.
 
 ## Otwarte
-- **Cucumber + Allure jak w pozostałych** — dziś MockMvc/unit; dołożyć feature'y.
+- ~~Cucumber + Allure jak w pozostałych~~ — ZROBIONE (2026-07-04): `comment-thread.feature`
+  (5 scenariuszy po HTTP: komentarz zalogowanego, odmowa anonima, odmowa pod nieznanym memem,
+  głosy-przełączniki ze score w listingu, kaskada MEME_DELETED — listener wołany wprost przez
+  beana-ogłoszeniodawcę, broker to nie kontrakt; hook @Before resetuje wątek kaskadą).
 - **Słownik `PurgeRule` zduplikowany** z memes (celowo — wspólny kontrakt tekstowy); rozważyć
   malutką libkę, jeśli urośnie trzeci konsument.
 - **Deduplikacja konsumenta** — purge idempotentny, więc zbędna; przy nie-idempotentnych
