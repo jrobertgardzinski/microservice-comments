@@ -1,8 +1,12 @@
 Feature: Comment threads under memes
 
-  Signed-in users discuss under an existing meme; identity comes from the security service, not
-  from the request body. Comment votes are one-per-user toggles, and the listing carries each
-  comment's score. When a meme is deleted, its whole thread disappears with it.
+  Signed-in users discuss under an existing meme; the COMMENT's author comes from the security
+  service, not from the request body. Votes on a COMMENT are one-per-user toggles, and the listing
+  carries each COMMENT's score. When a meme is deleted, its whole thread of COMMENTs disappears
+  with it.
+
+  Nouns:
+    COMMENT* -> Comment
 
   Scenario: a signed-in user comments and the thread lists it
     Given a signed-in user
