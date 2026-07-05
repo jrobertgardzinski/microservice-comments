@@ -44,6 +44,7 @@ class JwtSecurityAuthenticationGate implements SecurityAuthenticationGate {
     private final ObjectMapper mapper;
     private final AtomicReference<Map<String, PublicKey>> cachedKeys = new AtomicReference<>(Map.of());
 
+    @org.springframework.beans.factory.annotation.Autowired
     JwtSecurityAuthenticationGate(@Value("${security.url}") String securityUrl, ObjectMapper mapper) {
         this(jwksOver(RestClient.create(securityUrl), mapper), mapper);
     }
