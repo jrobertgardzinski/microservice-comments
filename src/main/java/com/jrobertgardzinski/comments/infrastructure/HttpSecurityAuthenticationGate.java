@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -12,8 +13,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Production gate: asks security's protected {@code GET /me} who the token belongs to. */
+/**
+ * Introspecting gate (the default, {@code security.verify=introspect}): asks security's protected
+ * {@code GET /me} who the token belongs to — one round-trip per request buys instant revocation
+ * awareness. {@link JwtSecurityAuthenticationGate} is the offline alternative.
+ */
 @Component
+@ConditionalOnProperty(name = "security.verify", havingValue = "introspect", matchIfMissing = true)
 class HttpSecurityAuthenticationGate implements SecurityAuthenticationGate {
 
     private final RestClient securityService;
