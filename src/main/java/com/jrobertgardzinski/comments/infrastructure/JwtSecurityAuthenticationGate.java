@@ -85,7 +85,10 @@ class JwtSecurityAuthenticationGate implements SecurityAuthenticationGate {
                     ? StreamSupport.stream(claims.path("roles").spliterator(), false)
                             .map(JsonNode::asText).collect(Collectors.toUnmodifiableSet())
                     : Set.of("USER");
-            return Optional.of(new Caller(email, roles));
+            // the MFA floor rides the token as a claim; absent (an older token) counts as false,
+            // which withholds nothing from ordinary users — only from privileged ones (fail-closed)
+            boolean mfaCompliant = claims.path("mfaCompliant").asBoolean(false);
+            return Optional.of(new Caller(email, Caller.withMfaFloor(roles, mfaCompliant)));
         } catch (Exception invalidTokenOrJwksDown) {
             return Optional.empty();
         }
