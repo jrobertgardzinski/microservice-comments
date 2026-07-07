@@ -3,8 +3,8 @@
 Tylko otwarte rzeczy. Historia = git log.
 
 **Plan pracy z instrukcjami wykonawczymi: [docs/opus-playbook.md](docs/opus-playbook.md)**
-(2026-07-07; C1 uzgodnienie todo+README bramy → C2 audyt parytetu JWT z memes →
-C3 test kontraktowy PurgeRule → C4 tylko za zgodą usera).
+(2026-07-07; C1 ZROBIONE → C2 audyt parytetu JWT z memes → C3 test kontraktowy
+PurgeRule → C4 tylko za zgodą usera).
 
 ## Zrobione (wydzielenie z microservice-memes)
 - Wątki komentarzy + głosy na komentarze (lib `voting`), realny Postgres + Flyway (H2 w testach).
@@ -14,6 +14,10 @@ C3 test kontraktowy PurgeRule → C4 tylko za zgodą usera).
 - Kaskada `MEME_DELETED` → wątek znika razem z memem.
 
 ## Zrobione (cd.)
+- **Offline JWT gate** — ZROBIONE (2026-07-06, `7609b7c`+`bc408b8`): `JwtSecurityAuthenticationGate`
+  weryfikuje podpis EdDSA access tokena po JWKS security zamiast wołać `/me`; przełącznik
+  `security.verify` = `introspect` (default) | `offline` (env `SECURITY_VERIFY`); kompromis
+  świadomy — offline nie widzi logoutu/zmiany ról do `exp`. Opisane w README.
 - **Moderacja komentarzy (MODERATOR)** — ZROBIONE (2026-07-04): brama czyta role z /me security
   (Caller{email,roles}), DELETE /memes/{memeId}/comments/{commentId} — autor swój, MODERATOR/ADMIN
   cudzy; DeleteComment autoryzuje (DELETED/FORBIDDEN/NO_SUCH_COMMENT) i kasuje komentarz+głosy.

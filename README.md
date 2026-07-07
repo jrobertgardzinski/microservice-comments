@@ -7,8 +7,15 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
 
 ## Who it talks to
 
-- **microservice-security** — token introspection (`GET /me`): writing requires signing in,
-  reading is public (a presented token additionally personalises `myVote`).
+- **microservice-security** — writing requires signing in, reading is public (a presented
+  token additionally personalises `myVote`). Two interchangeable authentication gates,
+  switched by `security.verify` (env `SECURITY_VERIFY`):
+  - `introspect` (default) — asks `GET /me` per request: sees logouts and role changes
+    immediately, costs one HTTP call per write.
+  - `offline` — verifies the access token's EdDSA signature against security's
+    `/.well-known/jwks.json` (keys cached; an unknown `kid` refetches once, which also covers
+    security restarting with fresh keys). No per-request call — the trade-off is revocation
+    blindness until the token's `exp`.
 - **microservice-memes** — meme existence checks (HEAD) so comments never attach to ghosts, and
   the `MEME_DELETED` events on `memes-events`: when a meme goes, this service drops its whole
   thread (eventually consistent, idempotent).
@@ -20,9 +27,10 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
 ## Contract
 
 ```
-GET  /memes/{memeId}/comments                    -> 200 [ { id, author, text, score, myVote } ]
-POST /memes/{memeId}/comments                    { "text": ... }        -> 201 | 400 | 401 | 404
-POST /memes/{memeId}/comments/{commentId}/votes  { "direction": ... }   -> 200 { score, myVote } | 401 | 404
+GET    /memes/{memeId}/comments?page=&size=        -> 200 [ { id, author, text, score, myVote } ]   (size cap 100, default 50)
+POST   /memes/{memeId}/comments                    { "text": ... }      -> 201 | 400 | 401 | 404 | 429
+POST   /memes/{memeId}/comments/{commentId}/votes  { "direction": ... } -> 200 { score, myVote } | 401 | 404
+DELETE /memes/{memeId}/comments/{commentId}        author their own; MODERATOR/ADMIN anyone's
 ```
 
 ## Run & test
