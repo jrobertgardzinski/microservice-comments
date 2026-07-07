@@ -3,9 +3,9 @@
 Tylko otwarte rzeczy. Historia = git log.
 
 **Plan pracy z instrukcjami wykonawczymi: [docs/opus-playbook.md](docs/opus-playbook.md)**
-(2026-07-07; C1 i C2 ZROBIONE — audyt parytetu JWT: implementacje i testy w memes
-i comments IDENTYCZNE co do bajta modulo pakiet, wskaźniki na bliźniaka w Javadocach →
-C3 test kontraktowy PurgeRule → C4 tylko za zgodą usera).
+(2026-07-07; C1–C3 ZROBIONE — audyt parytetu JWT: bliźniaki IDENTYCZNE co do bajta,
+wskaźniki w Javadocach; `PurgeRuleContractTest` przybija wspólny słownik lustrzanie
+do memes → zostaje C4, tylko za zgodą usera).
 
 ## Zrobione (wydzielenie z microservice-memes)
 - Wątki komentarzy + głosy na komentarze (lib `voting`), realny Postgres + Flyway (H2 w testach).
