@@ -2,6 +2,10 @@
 
 Tylko otwarte rzeczy. Historia = git log.
 
+**Plan pracy z instrukcjami wykonawczymi: [docs/opus-playbook.md](docs/opus-playbook.md)**
+(2026-07-07; C1 uzgodnienie todo+README bramy → C2 audyt parytetu JWT z memes →
+C3 test kontraktowy PurgeRule → C4 tylko za zgodą usera).
+
 ## Zrobione (wydzielenie z microservice-memes)
 - Wątki komentarzy + głosy na komentarze (lib `voting`), realny Postgres + Flyway (H2 w testach).
 - Brama do security (introspekcja tokena), istnienie mema przez HEAD do memes.
