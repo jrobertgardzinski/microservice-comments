@@ -1,10 +1,12 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.AddComment;
+import com.jrobertgardzinski.comments.application.CommentModeration;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.application.CommentVotes;
 import com.jrobertgardzinski.comments.application.DeleteComment;
 import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.application.HideComment;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.application.MemeDirectory;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
@@ -40,8 +42,14 @@ class CommentsConfig {
     }
 
     @Bean
-    ListComments listComments(CommentRepository commentRepository, CommentVotes commentVotes) {
-        return new ListComments(commentRepository, commentVotes);
+    ListComments listComments(CommentRepository commentRepository, CommentModeration moderation,
+                              CommentVotes commentVotes) {
+        return new ListComments(commentRepository, moderation, commentVotes);
+    }
+
+    @Bean
+    HideComment hideComment(CommentRepository commentRepository, CommentModeration moderation) {
+        return new HideComment(commentRepository, moderation);
     }
 
     @Bean
@@ -70,7 +78,8 @@ class CommentsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/memes/**").allowedOrigins(uiOrigin).allowedMethods("GET", "POST");
+                registry.addMapping("/memes/**").allowedOrigins(uiOrigin)
+                        .allowedMethods("GET", "POST", "PUT", "DELETE");
             }
         };
     }

@@ -63,3 +63,18 @@ Feature: Comment threads under memes
     And her comment "Znikne razem z memem" under the known meme
     When the meme service announces the meme was deleted
     Then the thread of the known meme is empty
+
+  Scenario: a moderator hides a COMMENT; readers see a tombstone, the author still sees their words
+    Given a signed-in user
+    And her comment "Kontrowersyjne" under the known meme
+    When a moderator hides that comment
+    Then a reader sees that comment as hidden without its text
+    And the author still sees that comment's text, marked hidden
+    When a moderator reveals that comment
+    Then a reader sees that comment's text again
+
+  Scenario: only a moderator may hide a COMMENT
+    Given a signed-in user
+    And her comment "Nie zdejmiesz" under the known meme
+    When "bob" tries to hide that comment
+    Then the hiding is refused as not-a-moderator

@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -189,6 +190,70 @@ public class CommentThreadSteps {
     public void deletionRefused() {
         assertEquals(403, lastResponse.statusCode());
         assertEquals("NOT_YOURS", lastResponse.jsonPath().getString("status"));
+    }
+
+    @When("a moderator hides that comment")
+    public void moderatorHides() {
+        lastResponse = setHidden(TestAuthConfig.MODERATOR_TOKEN, true);
+        assertEquals(200, lastResponse.statusCode());
+        assertEquals("HIDDEN", lastResponse.jsonPath().getString("status"));
+    }
+
+    @When("a moderator reveals that comment")
+    public void moderatorReveals() {
+        lastResponse = setHidden(TestAuthConfig.MODERATOR_TOKEN, false);
+        assertEquals(200, lastResponse.statusCode());
+        assertEquals("REVEALED", lastResponse.jsonPath().getString("status"));
+    }
+
+    @When("{string} tries to hide that comment")
+    public void strangerHides(String who) {
+        lastResponse = setHidden(TestAuthConfig.SECOND_TOKEN, true);
+    }
+
+    @Then("a reader sees that comment as hidden without its text")
+    public void readerSeesTombstone() {
+        var comment = threadEntry(null, commentId);
+        assertEquals(Boolean.TRUE, comment.get("hidden"), "a hidden comment must be flagged");
+        assertNull(comment.get("text"), "a reader must not see a hidden comment's text");
+    }
+
+    @Then("the author still sees that comment's text, marked hidden")
+    public void authorSeesOwnHidden() {
+        var comment = threadEntry(TestAuthConfig.VALID_TOKEN, commentId);
+        assertEquals(Boolean.TRUE, comment.get("hidden"));
+        assertEquals("Kontrowersyjne", comment.get("text"), "the author still sees their own words");
+    }
+
+    @Then("a reader sees that comment's text again")
+    public void readerSeesTextAgain() {
+        var comment = threadEntry(null, commentId);
+        assertNull(comment.get("hidden"), "a revealed comment carries no hidden flag");
+        assertEquals("Kontrowersyjne", comment.get("text"));
+    }
+
+    @Then("the hiding is refused as not-a-moderator")
+    public void hidingRefused() {
+        assertEquals(403, lastResponse.statusCode());
+        assertEquals("NOT_A_MODERATOR", lastResponse.jsonPath().getString("status"));
+    }
+
+    private Response setHidden(String token, boolean hidden) {
+        return RestAssured.given().port(port)
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .body("{\"hidden\":" + hidden + "}")
+                .put("/memes/{memeId}/comments/{commentId}/hidden", TestAuthConfig.EXISTING_MEME, commentId);
+    }
+
+    /** One comment's JSON from the thread, read through the eyes of {@code token} (null = anonymous). */
+    private java.util.Map<String, Object> threadEntry(String token, String id) {
+        var request = RestAssured.given().port(port);
+        if (token != null) {
+            request = request.header("Authorization", "Bearer " + token);
+        }
+        return request.get("/memes/{memeId}/comments", TestAuthConfig.EXISTING_MEME)
+                .jsonPath().getMap("find { it.id == '" + id + "' }");
     }
 
     private Response deleteComment(String token) {

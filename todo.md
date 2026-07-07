@@ -3,9 +3,7 @@
 Tylko otwarte rzeczy. Historia = git log.
 
 **Plan pracy z instrukcjami wykonawczymi: [docs/opus-playbook.md](docs/opus-playbook.md)**
-(2026-07-07; C1–C3 ZROBIONE — audyt parytetu JWT: bliźniaki IDENTYCZNE co do bajta,
-wskaźniki w Javadocach; `PurgeRuleContractTest` przybija wspólny słownik lustrzanie
-do memes → zostaje C4, tylko za zgodą usera).
+(2026-07-07; C1–C4 ZROBIONE — playbook comments wyczerpany).
 
 ## Zrobione (wydzielenie z microservice-memes)
 - Wątki komentarzy + głosy na komentarze (lib `voting`), realny Postgres + Flyway (H2 w testach).
@@ -23,6 +21,16 @@ do memes → zostaje C4, tylko za zgodą usera).
   (Caller{email,roles}), DELETE /memes/{memeId}/comments/{commentId} — autor swój, MODERATOR/ADMIN
   cudzy; DeleteComment autoryzuje (DELETED/FORBIDDEN/NO_SUCH_COMMENT) i kasuje komentarz+głosy.
   2 scenariusze Gherkin.
+
+## Zrobione (cd.)
+- **Ukrywanie komentarza przez moderatora (C4)** — ZROBIONE (2026-07-07, zgoda usera):
+  miękki środek między niczym a kasowaniem — `PUT .../comments/{id}/hidden {hidden}`
+  (MODERATOR/ADMIN, 403 NOT_A_MODERATOR), osobny store `CommentModeration` + tabela
+  `comment_flags` (V2, FK cascade), listing pokazuje tombstone `{hidden:true, text:null}`
+  czytelnikom a autorowi jego słowa z flagą (`CommentWithScore` niesie hidden+viewerIsAuthor),
+  galeria: przycisk oka moderatora + tombstone. 2 scenariusze Gherkin. PRZY OKAZJI naprawiony
+  leak połączeń: `hiddenIn`/`nsfwIds` używały `.query(...).stream()` (kursor otwarty) —
+  przełączone na `.list()` (bliźniaczo w memes `JdbcContentFlags`).
 
 ## Otwarte
 - ~~Cucumber + Allure jak w pozostałych~~ — ZROBIONE (2026-07-04): `comment-thread.feature`

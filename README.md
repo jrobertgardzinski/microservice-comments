@@ -31,7 +31,13 @@ GET    /memes/{memeId}/comments?page=&size=        -> 200 [ { id, author, text, 
 POST   /memes/{memeId}/comments                    { "text": ... }      -> 201 | 400 | 401 | 404 | 429
 POST   /memes/{memeId}/comments/{commentId}/votes  { "direction": ... } -> 200 { score, myVote } | 401 | 404
 DELETE /memes/{memeId}/comments/{commentId}        author their own; MODERATOR/ADMIN anyone's
+PUT    /memes/{memeId}/comments/{commentId}/hidden { "hidden": ... }    MODERATOR/ADMIN only -> 200 | 403 | 404
 ```
+
+A hidden comment stays in the thread as a tombstone: readers get `{hidden: true}` with
+`text: null`, the author still sees their own words with the flag (the gentler counterpart
+to deletion). It's a moderator's judgement, kept in a separate `comment_flags` table so a
+deleted comment sheds it by cascade.
 
 ## Run & test
 

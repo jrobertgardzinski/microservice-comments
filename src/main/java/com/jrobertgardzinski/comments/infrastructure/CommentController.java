@@ -3,6 +3,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.jrobertgardzinski.comments.application.AddComment;
 import com.jrobertgardzinski.comments.application.CommentWithScore;
 import com.jrobertgardzinski.comments.application.DeleteComment;
+import com.jrobertgardzinski.comments.application.HideComment;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
 import com.jrobertgardzinski.comments.config.RateLimit;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,6 +43,9 @@ class CommentController {
     /** What a client posts to vote: {@code direction} is UP or DOWN (case-insensitive). */
     record VoteRequest(String direction) {}
 
+    /** What a moderator sends to hide or reveal a comment. */
+    record HideRequest(Boolean hidden) {}
+
     /** Server policy: a thread page is at most this many comments. */
     private static final int MAX_PAGE_SIZE = 100;
     private static final int DEFAULT_PAGE_SIZE = 50;
@@ -49,14 +54,16 @@ class CommentController {
     private final ListComments listComments;
     private final VoteOnComment voteOnComment;
     private final DeleteComment deleteComment;
+    private final HideComment hideComment;
     private final RateLimit commentRate;
 
     CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment,
-                      DeleteComment deleteComment, RateLimit commentRate) {
+                      DeleteComment deleteComment, HideComment hideComment, RateLimit commentRate) {
         this.addComment = addComment;
         this.listComments = listComments;
         this.voteOnComment = voteOnComment;
         this.deleteComment = deleteComment;
+        this.hideComment = hideComment;
         this.commentRate = commentRate;
     }
 
@@ -97,10 +104,34 @@ class CommentController {
         Map<String, Object> body = new HashMap<>();
         body.put("id", entry.comment().id());
         body.put("author", entry.comment().author());
-        body.put("text", entry.comment().text());
         body.put("score", entry.tally().score());
         body.put("myVote", entry.tally().voterChoice().map(Enum::name).orElse(null));
+        if (entry.hidden()) {
+            // a tombstone for readers; the author still sees their own words, marked hidden
+            body.put("hidden", true);
+            body.put("text", entry.viewerIsAuthor() ? entry.comment().text() : null);
+        } else {
+            body.put("text", entry.comment().text());
+        }
         return body;
+    }
+
+    /** Hide or reveal a comment — a MODERATOR-only soft touch; the comment stays as a tombstone. */
+    @PutMapping("/{commentId}/hidden")
+    ResponseEntity<?> hide(@PathVariable("memeId") String memeId,
+                           @PathVariable("commentId") String commentId,
+                           @RequestBody HideRequest request,
+                           @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
+                                   required = false) java.util.Set<String> roles) {
+        boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
+        boolean hidden = Boolean.TRUE.equals(request.hidden());
+        HideComment.Status status = hideComment.execute(commentId, hidden, moderator);
+        return switch (status) {
+            case UPDATED -> ResponseEntity.ok(Map.of("status", hidden ? "HIDDEN" : "REVEALED", "id", commentId));
+            case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_A_MODERATOR",
+                    "detail", "only a moderator can hide a comment"));
+            case NO_SUCH_COMMENT -> ResponseEntity.notFound().build();
+        };
     }
 
     @PostMapping("/{commentId}/votes")
