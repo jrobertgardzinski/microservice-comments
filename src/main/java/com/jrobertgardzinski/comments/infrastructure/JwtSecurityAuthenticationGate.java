@@ -32,6 +32,9 @@ import java.util.stream.StreamSupport;
  * is revocation blindness: a logout or role change is invisible until the token's {@code exp}
  * (an hour by default). Keys are cached; an unknown {@code kid} triggers one refetch, which also
  * covers security restarting with fresh ephemeral keys.
+ *
+ * <p>Deliberately byte-identical (modulo package) with its twin in microservice-memes —
+ * audited 2026-07-07, tests included. If you change one side, change both.
  */
 @Component
 @ConditionalOnProperty(name = "security.verify", havingValue = "offline")
