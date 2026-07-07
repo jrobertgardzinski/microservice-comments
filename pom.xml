@@ -95,7 +95,9 @@
             <!-- tests run the real JDBC adapters on H2 (PostgreSQL mode) — no Docker needed -->
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <!-- runtime, not test: the UI e2e harness (and any DB-less dev run) boots the real
+                 jar on in-memory H2 in PostgreSQL mode, the same pattern memes uses -->
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.qameta.allure</groupId>
