@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,7 +31,19 @@ class MemesEventsListener {
     }
 
     @KafkaListener(topics = "memes-events", groupId = "comments")
-    void receive(String payload) {
+    void receive(String payload,
+                 @Header(name = KafkaTracing.HEADER, required = false) String cid) {
+        if (cid != null) {
+            MDC.put("cid", cid);   // continue the trace memes started when it announced the deletion
+        }
+        try {
+            handle(payload);
+        } finally {
+            MDC.remove("cid");
+        }
+    }
+
+    private void handle(String payload) {
         JsonNode event;
         try {
             event = mapper.readTree(payload);

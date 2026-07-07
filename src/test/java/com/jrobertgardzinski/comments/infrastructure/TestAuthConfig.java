@@ -49,6 +49,6 @@ public class TestAuthConfig {
     @Bean
     public Consumer<String> memesEventsAnnouncer(DeleteThread deleteThread, ObjectMapper mapper) {
         MemesEventsListener listener = new MemesEventsListener(deleteThread, mapper);
-        return listener::receive;
+        return payload -> listener.receive(payload, null);   // no cid on the direct, broker-less path
     }
 }

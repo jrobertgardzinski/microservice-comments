@@ -6,9 +6,11 @@ import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -36,7 +38,19 @@ class PurgeCommandsListener {
     }
 
     @KafkaListener(topics = "content-commands", groupId = "comments")
-    void receive(String payload) throws Exception {
+    void receive(String payload,
+                 @Header(name = KafkaTracing.HEADER, required = false) String cid) throws Exception {
+        if (cid != null) {
+            MDC.put("cid", cid);   // continue the trace the deletion request started in security
+        }
+        try {
+            handle(payload);
+        } finally {
+            MDC.remove("cid");
+        }
+    }
+
+    private void handle(String payload) throws Exception {
         JsonNode command;
         try {
             command = mapper.readTree(payload);
@@ -50,10 +64,11 @@ class PurgeCommandsListener {
         String email = command.path("email").asText();
         purgeUserComments.execute(email, requestedRule(command));
         LOG.info("purged comments of {} (saga {})", email, command.path("sagaId").asText());
-        kafka.send("comments-events", email, mapper.writeValueAsString(mapper.createObjectNode()
+        // forward the cid on the confirmation so security's listener continues the same trace
+        kafka.send(KafkaTracing.withCid("comments-events", email, mapper.writeValueAsString(mapper.createObjectNode()
                 .put("type", "USER_CONTENT_PURGED")
                 .put("sagaId", command.path("sagaId").asText())
-                .put("email", email)));
+                .put("email", email))));
     }
 
     private Optional<PurgeRule> requestedRule(JsonNode command) {
