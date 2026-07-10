@@ -1,0 +1,32 @@
+name: CI
+
+# microservice-comments needs one sibling SNAPSHOT (voting, public), so CI checks it out and
+# installs it first; the service then builds and tests on its own — fast per-push feedback without
+# the whole workspace reactor. The reactor CI (in the aggregator repo) still validates it together
+# with everything else, including the pact this build generates for microservice-security.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: jrobertgardzinski/voting
+          path: .deps/voting
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Install the voting library
+        run: mvn -B -q --no-transfer-progress -f .deps/voting/pom.xml install -DskipTests
+      - name: Build and test
+        run: mvn -B --no-transfer-progress clean verify
