@@ -22,6 +22,10 @@ jobs:
         with:
           repository: jrobertgardzinski/voting
           path: voting
+      - uses: actions/checkout@v4
+        with:
+          repository: jrobertgardzinski/offline-jwt
+          path: offline-jwt
       # consumer of this service's confirmations — checkout only (its pacts/), no build
       - uses: actions/checkout@v4
         with:
@@ -33,7 +37,9 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Install the voting library
-        run: mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
+      - name: Install the shared libraries
+        run: |
+          mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
       - name: Build and test (including pact provider verification)
         run: mvn -B --no-transfer-progress -f microservice-comments/pom.xml clean verify
