@@ -26,12 +26,12 @@ import static org.mockito.Mockito.verify;
  * The consumer's half of the account-deletion saga contract: the pact states the exact shape of
  * the {@code content-commands} event this service acts on — with and without the leaver's explicit
  * policy — and proves it by driving the real listener with the pact's payload. The generated pact
- * (pacts/, committed) is verified against the REAL orchestrator by microservice-security's
+ * (pacts/, committed) is verified against the REAL orchestrator by microservice-offboarding's
  * provider tests. Only the fields this consumer reads are in the contract; the producer may add
  * more (tolerant reader).
  */
 @ExtendWith(PactConsumerTestExt.class)
-@PactTestFor(providerName = "microservice-security", providerType = ProviderType.ASYNCH,
+@PactTestFor(providerName = "microservice-offboarding", providerType = ProviderType.ASYNCH,
         pactVersion = PactSpecVersion.V3)
 class PurgeCommandsContractTest {
 

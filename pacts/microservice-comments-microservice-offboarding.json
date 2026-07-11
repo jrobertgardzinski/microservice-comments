@@ -102,6 +102,6 @@
     }
   },
   "provider": {
-    "name": "microservice-security"
+    "name": "microservice-offboarding"
   }
 }

@@ -24,19 +24,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * The saga contract's other direction, provider side: microservice-security's committed pact
+ * The saga contract's other direction, provider side: microservice-offboarding's committed pact
  * states which USER_CONTENT_PURGED fields its orchestrator reads; this test proves the REAL
  * listener — driven by a purge command, its confirmation captured off the Kafka template — emits
  * that shape. Skipped, not failed, when the consumer repo is not checked out next to this one.
  */
 @Provider("microservice-comments")
-@PactFolder("../microservice-security/pacts")
+@PactFolder("../microservice-offboarding/pacts")
 @EnabledIf(value = "consumerPactsCheckedOut",
-        disabledReason = "microservice-security is not checked out next to this repo")
+        disabledReason = "microservice-offboarding is not checked out next to this repo")
 class PurgeConfirmationPactProviderTest {
 
     static boolean consumerPactsCheckedOut() {
-        return Files.isDirectory(Path.of("../microservice-security/pacts"));
+        return Files.isDirectory(Path.of("../microservice-offboarding/pacts"));
     }
 
     @BeforeEach
