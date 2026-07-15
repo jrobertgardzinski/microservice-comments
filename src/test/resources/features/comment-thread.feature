@@ -5,9 +5,6 @@ Feature: Comment threads under memes
   carries each COMMENT's score. When a meme is deleted, its whole thread of COMMENTs disappears
   with it.
 
-  Nouns:
-    COMMENT* -> Comment
-
   Scenario: a signed-in user comments and the thread lists it
     Given a signed-in user
     When she comments "Świetny mem!" under the known meme
