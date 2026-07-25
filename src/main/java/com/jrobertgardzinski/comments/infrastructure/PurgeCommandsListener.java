@@ -14,6 +14,8 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The comments service's side of the account-deletion saga: a PURGE_USER_CONTENT command purges
@@ -109,9 +111,34 @@ class PurgeCommandsListener {
         }
     }
 
-    /** Only the purge-rule vocabulary's own characters, truncated — never the raw wire text. */
+    /**
+     * The purge-rule VOCABULARY, whole tokens only — never the raw wire text. The old per-character
+     * filter ({@code [A-Z_:0-9]}) kept every digit and every uppercase letter, which is exactly the
+     * alphabet of phone numbers, PESELs and SHOUTED e-mail addresses — numeric and uppercase PII
+     * sailed through it into the WARN. This whitelist inverts the burden of proof: only the three
+     * rule words survive, with a popularity threshold (≤4 digits) accepted solely in its grammar
+     * position after {@code KEEP_POPULAR_ANONYMIZED:} — a free-standing number is NOT vocabulary,
+     * because "601 234 567" is a phone number chunked into innocent-looking ≤4-digit tokens.
+     * Everything unrecognised collapses to a single {@code ?} per run, so the log shows the rule's
+     * shape ("was it almost a rule?") and none of its content.
+     */
+    private static final Pattern VOCABULARY = Pattern.compile(
+            "(?<![A-Z_0-9:])(?:KEEP_POPULAR_ANONYMIZED(?::\\d{1,4})?|ANONYMIZE_AUTHOR|DELETE)(?![A-Z_0-9:])");
+
     private static String sanitizedFragment(String text) {
-        String kept = text.replaceAll("[^A-Z_:0-9]", "?");
-        return kept.length() <= 32 ? kept : kept.substring(0, 32) + "…";
+        StringBuilder kept = new StringBuilder();
+        Matcher vocabulary = VOCABULARY.matcher(text);
+        int consumedUpTo = 0;
+        while (vocabulary.find()) {
+            if (vocabulary.start() > consumedUpTo) {
+                kept.append('?');   // one ? per unrecognised run, no matter how long or what it held
+            }
+            kept.append(vocabulary.group());
+            consumedUpTo = vocabulary.end();
+        }
+        if (consumedUpTo < text.length() || text.isEmpty()) {
+            kept.append('?');
+        }
+        return kept.length() <= 32 ? kept.toString() : kept.substring(0, 32) + "…";
     }
 }

@@ -188,6 +188,24 @@ class JdbcPersistenceTest {
                 () -> alwaysDuplicate.cast(commentId, "voter@example.com", VoteDirection.UP));
     }
 
+    @Test
+    @DisplayName("a duplicate key on the hide RETRY is a bug and stays a raw error, not a fake 404")
+    void hide_with_a_permanent_duplicate_key_is_not_dressed_up_as_unknown_comment() {
+        String commentId = savedComment();
+        // the votes twin above already guards cast(); this is the same asymmetry for moderation —
+        // a second DuplicateKeyException in a row cannot be the MERGE race (the winner's row makes
+        // the retry pass WHEN MATCHED), so it must surface instead of reading as "no such comment"
+        var alwaysDuplicate = new JdbcCommentModeration(jdbc) {
+            @Override
+            void mergeFlag(String id) {
+                throw new DuplicateKeyException("simulated permanently broken key");
+            }
+        };
+
+        assertThrows(DuplicateKeyException.class,
+                () -> alwaysDuplicate.setHidden(commentId, true));
+    }
+
     private String savedComment() {
         String id = UUID.randomUUID().toString();
         // a fresh meme id per comment keeps these rows out of the other suites' threads

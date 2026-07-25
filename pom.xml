@@ -100,6 +100,21 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <!-- a real PostgreSQL 16 for the dialect bet: the MERGE upserts, the concurrent
+                 first-vote unique violation and the V3 foreign key are proven against the very
+                 database the stack runs, not only H2's PostgreSQL mode; skipped where docker is
+                 absent (the same pattern as memes' MinIO test). Version pinned by the Spring
+                 Boot BOM, like every other managed dependency here. -->
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-junit5</artifactId>
             <scope>test</scope>

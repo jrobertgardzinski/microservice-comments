@@ -105,6 +105,69 @@ class PurgeCommandsListenerTest {
     }
 
     @Test
+    @DisplayName("a phone number in a broken rule never reaches the log — not even in digit chunks")
+    void phone_number_in_rule_text_is_not_echoed_into_the_log() throws Exception {
+        when(kafka.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        // the old per-character filter kept [0-9], so "+48 601 234 567" leaked as 48?601?234?567;
+        // the token whitelist accepts numbers only as KEEP_POPULAR_ANONYMIZED's threshold
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-6\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"call me +48 601 234 567\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        assertTrue(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("unparseable comments purge rule")),
+                "the fallback to the default must still leave a trace in the log");
+        assertFalse(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("48")
+                                || event.getFormattedMessage().contains("601")
+                                || event.getFormattedMessage().contains("234")
+                                || event.getFormattedMessage().contains("567")),
+                "no chunk of the phone number may survive into the log");
+    }
+
+    @Test
+    @DisplayName("a PESEL in a broken rule never reaches the log")
+    void pesel_in_rule_text_is_not_echoed_into_the_log() throws Exception {
+        when(kafka.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        // eleven digits — the old filter passed all of them; ≤4-digit thresholds are only
+        // vocabulary straight after KEEP_POPULAR_ANONYMIZED:, so a bare number collapses to ?
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-7\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"90010112345\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        assertFalse(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("90010112345")
+                                || event.getFormattedMessage().contains("9001")),
+                "neither the PESEL nor any prefix of it may survive into the log");
+    }
+
+    @Test
+    @DisplayName("an UPPERCASE e-mail in a broken rule never reaches the log")
+    void uppercase_email_in_rule_text_is_not_echoed_into_the_log() throws Exception {
+        when(kafka.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        // the old filter kept [A-Z_], so LEAVER@EXAMPLE.COM leaked as LEAVER?EXAMPLE?COM;
+        // whole-token whitelisting reduces every non-vocabulary word to ?
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-8\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"LEAVER@EXAMPLE.COM\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        assertFalse(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("LEAVER")
+                                || event.getFormattedMessage().contains("EXAMPLE")
+                                || event.getFormattedMessage().contains("COM")),
+                "no fragment of a shouted e-mail may survive into the log");
+    }
+
+    @Test
     @DisplayName("a successful purge logs the saga id, never the leaver's e-mail")
     void successful_purge_keeps_the_email_out_of_the_log() throws Exception {
         when(kafka.send(any(ProducerRecord.class)))

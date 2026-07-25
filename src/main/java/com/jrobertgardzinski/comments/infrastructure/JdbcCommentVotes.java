@@ -17,12 +17,15 @@ import java.util.Optional;
  * Postgres-backed {@link CommentVotes} (H2 in tests): one row per (comment, voter). Cast is a
  * standard-SQL {@code MERGE} upsert — one statement instead of delete+insert. MERGE, not
  * Postgres' {@code ON CONFLICT}: H2 2.3's PostgreSQL mode only accepts a targetless
- * {@code ON CONFLICT DO NOTHING} (verified 2026-07-25), while standard MERGE is spoken by both H2
- * and Postgres 15+ (the stack runs 16). Unlike ON CONFLICT, MERGE offers no atomicity guarantee
- * against a concurrent insert: two first-time casts by the same voter can both take WHEN NOT
- * MATCHED and the loser hits the primary key — the race is not gone, it is reduced to one rare
- * retry (the second pass lands in WHEN MATCHED). Proven against the real schema by
- * JdbcPersistenceTest.
+ * {@code ON CONFLICT DO NOTHING}, while standard MERGE is spoken by both H2 and Postgres 15+
+ * (the stack runs 16). Unlike ON CONFLICT, MERGE offers no atomicity guarantee against a
+ * concurrent insert: two first-time casts by the same voter can both take WHEN NOT MATCHED and
+ * the loser hits the primary key — the race is not gone, it is reduced to one rare retry (the
+ * second pass lands in WHEN MATCHED). Proven against the real schema by JdbcPersistenceTest
+ * (H2, every run) and by PostgresDialectTest against PostgreSQL 16 itself (Testcontainers,
+ * docker runs): the upsert, the real 23505-on-race → DuplicateKeyException that this retry
+ * answers, and the 23503 foreign key behind {@link UnknownComment} are all under test on the
+ * production dialect, not taken on faith from H2's PostgreSQL mode.
  */
 @Repository
 class JdbcCommentVotes implements CommentVotes {
