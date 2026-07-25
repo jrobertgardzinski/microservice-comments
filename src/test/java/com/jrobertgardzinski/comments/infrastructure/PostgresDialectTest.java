@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -132,7 +133,9 @@ class PostgresDialectTest {
             awaitALockWaiter();
             tx1.commit();
 
-            Throwable raised = mergeOutcome.get();
+            // bounded get(): if the MERGE somehow never unblocks after tx1's commit, fail HERE
+            // with a readable TimeoutException instead of hanging until surefire's global kill
+            Throwable raised = mergeOutcome.get(15, TimeUnit.SECONDS);
             assertInstanceOf(DuplicateKeyException.class, raised,
                     "PG's MERGE must lose the WHEN NOT MATCHED race as the unique violation"
                             + " Spring maps to DuplicateKeyException — the H2 suite can only"
@@ -182,7 +185,9 @@ class PostgresDialectTest {
             awaitALockWaiter();
             tx1.commit();
             try {
-                cast.get();   // must NOT throw: the retry absorbed the race
+                // must NOT throw: the retry absorbed the race — bounded, so a cast() that
+                // never returns fails as a readable TimeoutException, not a surefire hang
+                cast.get(15, TimeUnit.SECONDS);
             } catch (ExecutionException surfaced) {
                 fail("cast() must survive losing the MERGE race on real PG, but threw: "
                         + surfaced.getCause());
@@ -244,6 +249,12 @@ class PostgresDialectTest {
      * Wait (briefly) until some other session is blocked on a lock — the sign that tx2's MERGE
      * has reached the in-doubt index entry, so committing tx1 now forces the unique violation
      * instead of letting a late MERGE see the committed row and slide into WHEN MATCHED.
+     *
+     * <p>GUARD: the probe counts lock waiters across the WHOLE cluster (pg_stat_activity is not
+     * filtered down to this test's sessions), so it assumes the tests of this class run
+     * sequentially — the JUnit default. Under parallel execution (junit.jupiter.execution.parallel)
+     * another test's waiter would satisfy the probe and commit tx1 too early: a false positive
+     * where the MERGE slides into WHEN MATCHED and the assertion fails flakily.</p>
      */
     private static void awaitALockWaiter() throws InterruptedException {
         long deadline = System.currentTimeMillis() + 10_000;
