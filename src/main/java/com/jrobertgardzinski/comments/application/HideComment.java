@@ -30,7 +30,13 @@ public class HideComment {
         if (comment.isEmpty()) {
             return Status.NO_SUCH_COMMENT;
         }
-        moderation.setHidden(commentId, hidden);
+        try {
+            moderation.setHidden(commentId, hidden);
+        } catch (CommentModeration.UnknownComment deletedMidHide) {
+            // the comment passed the check above but was deleted before the flag landed (the
+            // store's foreign key caught it) — same outcome as failing the check: no such comment
+            return Status.NO_SUCH_COMMENT;
+        }
         return Status.UPDATED;
     }
 }

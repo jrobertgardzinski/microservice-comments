@@ -97,11 +97,21 @@ class PurgeCommandsListener {
         if (rule.isMissingNode()) {
             return Optional.empty();
         }
+        String text = rule.asText();
         try {
-            return Optional.of(PurgeRule.parse(rule.asText()));
+            return Optional.of(PurgeRule.parse(text));
         } catch (IllegalArgumentException invalid) {
-            LOG.warn("ignoring invalid comments purge rule ({}), using the default", invalid.getMessage());
+            // NOT invalid.getMessage(): parse() pastes the raw rule text from the wire into it —
+            // a constant plus the length and a vocabulary-only fragment is enough to investigate
+            LOG.warn("ignoring an unparseable comments purge rule ({} chars, looks like '{}'), "
+                    + "using the default", text.length(), sanitizedFragment(text));
             return Optional.empty();
         }
+    }
+
+    /** Only the purge-rule vocabulary's own characters, truncated — never the raw wire text. */
+    private static String sanitizedFragment(String text) {
+        String kept = text.replaceAll("[^A-Z_:0-9]", "?");
+        return kept.length() <= 32 ? kept : kept.substring(0, 32) + "…";
     }
 }

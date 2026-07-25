@@ -42,7 +42,13 @@ class JdbcCommentVotes implements CommentVotes {
             // WHEN MATCHED and records this direction as the later of the two casts
             try {
                 mergeVote(commentId, voter, direction);
+            } catch (DuplicateKeyException stillDuplicate) {
+                // asymmetry on purpose: a duplicate on the RETRY cannot be the race again (the
+                // winner's row makes this pass WHEN MATCHED) — it is a key bug, and dressing it
+                // up as "no such comment" would hide it; let it surface as a 500
+                throw stillDuplicate;
             } catch (DataIntegrityViolationException commentGone) {
+                // only the non-duplicate refusals (the V3 foreign key) mean the comment vanished
                 throw new UnknownComment(commentId, commentGone);
             }
         } catch (DataIntegrityViolationException commentGone) {

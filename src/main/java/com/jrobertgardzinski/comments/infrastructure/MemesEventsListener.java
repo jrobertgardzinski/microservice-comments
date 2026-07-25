@@ -48,7 +48,10 @@ class MemesEventsListener {
         try {
             event = mapper.readTree(payload);
         } catch (Exception malformed) {
-            LOG.warn("dropping malformed memes event: {}", payload);
+            // NOT the payload itself: whatever arrived on the wire stays out of the logs
+            // (same rule as PurgeCommandsListener) — the size is enough to investigate
+            LOG.warn("dropping a malformed memes event ({} chars, not valid JSON)",
+                    payload == null ? 0 : payload.length());
             return;
         }
         if ("MEME_DELETED".equals(event.path("type").asText())) {

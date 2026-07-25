@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.CommentModeration;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -35,7 +36,20 @@ class JdbcCommentModeration implements CommentModeration {
             } catch (DuplicateKeyException concurrentHide) {
                 // PG15+ MERGE: a concurrent WHEN NOT MATCHED won the insert — one retry hits
                 // WHEN MATCHED, and both moderators wanted the same end state anyway
-                mergeFlag(commentId);
+                try {
+                    mergeFlag(commentId);
+                } catch (DuplicateKeyException stillDuplicate) {
+                    // asymmetry on purpose: a duplicate on the RETRY cannot be the race again
+                    // (the winner's row makes this pass WHEN MATCHED) — it is a key bug, and
+                    // dressing it up as "no such comment" would hide it; let it be a 500
+                    throw stillDuplicate;
+                } catch (DataIntegrityViolationException commentGone) {
+                    throw new UnknownComment(commentId, commentGone);
+                }
+            } catch (DataIntegrityViolationException commentGone) {
+                // not a duplicate key, so the foreign key: the comment was deleted between the
+                // caller's existence check and this hide — report "no such comment", not a 500
+                throw new UnknownComment(commentId, commentGone);
             }
         } else {
             jdbc.sql("DELETE FROM comment_flags WHERE comment_id = ?").params(commentId).update();

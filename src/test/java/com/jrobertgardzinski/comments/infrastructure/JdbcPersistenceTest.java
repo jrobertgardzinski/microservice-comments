@@ -161,6 +161,33 @@ class JdbcPersistenceTest {
                 () -> votes.cast(UUID.randomUUID().toString(), "voter@example.com", VoteDirection.UP));
     }
 
+    @Test
+    @DisplayName("hiding a comment deleted mid-hide surfaces as UnknownComment, not a raw FK error")
+    void hide_on_a_vanished_comment_reports_unknown_comment() {
+        // the hide-vs-delete race: no such row in comments, the comment_flags foreign key must
+        // refuse, and the adapter must translate instead of leaking a 500
+        assertThrows(CommentModeration.UnknownComment.class,
+                () -> moderation.setHidden(UUID.randomUUID().toString(), true));
+    }
+
+    @Test
+    @DisplayName("a duplicate key on the cast RETRY is a bug and stays a raw error, not a fake 404")
+    void cast_with_a_permanent_duplicate_key_is_not_dressed_up_as_unknown_comment() {
+        String commentId = savedComment();
+        // a second DuplicateKeyException in a row cannot be the MERGE race (the winner's row
+        // makes the retry pass WHEN MATCHED) — it is a key bug and must surface, not read as
+        // "no such comment"
+        var alwaysDuplicate = new JdbcCommentVotes(jdbc) {
+            @Override
+            void mergeVote(String id, String voter, VoteDirection direction) {
+                throw new DuplicateKeyException("simulated permanently broken key");
+            }
+        };
+
+        assertThrows(DuplicateKeyException.class,
+                () -> alwaysDuplicate.cast(commentId, "voter@example.com", VoteDirection.UP));
+    }
+
     private String savedComment() {
         String id = UUID.randomUUID().toString();
         // a fresh meme id per comment keeps these rows out of the other suites' threads

@@ -10,6 +10,17 @@ import java.util.Set;
  */
 public interface CommentModeration {
 
+    /**
+     * Hiding a comment that no longer exists — the hide-vs-delete race, surfaced by the store
+     * (the comment_flags foreign key) after the caller's existence check already passed. Callers
+     * treat it exactly like "comment not found" on the check itself.
+     */
+    class UnknownComment extends RuntimeException {
+        public UnknownComment(String commentId, Throwable cause) {
+            super("no comment " + commentId + " to hide", cause);
+        }
+    }
+
     void setHidden(String commentId, boolean hidden);
 
     boolean isHidden(String commentId);

@@ -46,8 +46,10 @@ public final class RateLimit {
 
     /**
      * Expired windows would otherwise pile up forever — one entry per author ever seen. A sweep
-     * at most once a minute keeps the map bounded to recent commenters at O(n) once per window,
-     * not per call. Races are harmless: a stale window seen by compute() resets the same way.
+     * roughly once a minute keeps the map bounded to recent commenters at O(n) once per window,
+     * not per call. "Roughly": the lastSweep check-then-set is not a CAS, so two threads arriving
+     * together may both sweep — a harmless duplicate pass, not a correctness problem. Races are
+     * harmless: a stale window seen by compute() resets the same way.
      */
     private void sweepExpired(Instant now) {
         if (Duration.between(lastSweep, now).toSeconds() < 60) {

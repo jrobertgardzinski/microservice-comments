@@ -84,6 +84,27 @@ class PurgeCommandsListenerTest {
     }
 
     @Test
+    @DisplayName("an unparseable purge rule is dropped WITHOUT echoing its raw text")
+    void invalid_rule_text_is_not_echoed_into_the_log() throws Exception {
+        when(kafka.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        // PurgeRule.parse's message pastes the raw rule text — the WARN must not repeat it
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-5\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"totally bogus leaver@example.com rule\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        assertTrue(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("unparseable comments purge rule")),
+                "the fallback to the default must still leave a trace in the log");
+        assertFalse(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("bogus")
+                                || event.getFormattedMessage().contains("leaver@example.com")),
+                "the raw rule text from the wire must not be echoed into the log");
+    }
+
+    @Test
     @DisplayName("a successful purge logs the saga id, never the leaver's e-mail")
     void successful_purge_keeps_the_email_out_of_the_log() throws Exception {
         when(kafka.send(any(ProducerRecord.class)))
