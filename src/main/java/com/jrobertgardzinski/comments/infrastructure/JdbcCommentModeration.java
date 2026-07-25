@@ -1,15 +1,22 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.CommentModeration;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.util.Set;
 
 /**
- * Postgres-backed {@link CommentModeration} (H2 in tests): one row per hidden comment. Setting
- * hidden is delete-then-insert — a portable upsert; the foreign key cascades, so a deleted comment
- * loses its flag without anyone here remembering to.
+ * Postgres-backed {@link CommentModeration} (H2 in tests): one row per hidden comment. Hiding is
+ * a standard-SQL {@code MERGE} upsert — one statement instead of delete+insert; revealing stays a
+ * delete, keeping the "a row means hidden" invariant. MERGE, not Postgres' {@code ON CONFLICT}:
+ * H2 2.3's PostgreSQL mode only accepts a targetless {@code ON CONFLICT DO NOTHING} (verified
+ * 2026-07-25), while standard MERGE is spoken by both H2 and Postgres 15+ (the stack runs 16).
+ * Unlike ON CONFLICT, MERGE gives no atomicity against a concurrent insert: two moderators hiding
+ * the same comment can both take WHEN NOT MATCHED and the loser hits the primary key — the race
+ * is not gone, it is reduced to one rare retry (the second pass lands in WHEN MATCHED). The
+ * foreign key cascades, so a deleted comment loses its flag without anyone here remembering to.
  */
 @Repository
 class JdbcCommentModeration implements CommentModeration {
@@ -22,11 +29,27 @@ class JdbcCommentModeration implements CommentModeration {
 
     @Override
     public void setHidden(String commentId, boolean hidden) {
-        jdbc.sql("DELETE FROM comment_flags WHERE comment_id = ?").params(commentId).update();
         if (hidden) {
-            jdbc.sql("INSERT INTO comment_flags (comment_id, hidden) VALUES (?, TRUE)")
-                    .params(commentId).update();
+            try {
+                mergeFlag(commentId);
+            } catch (DuplicateKeyException concurrentHide) {
+                // PG15+ MERGE: a concurrent WHEN NOT MATCHED won the insert — one retry hits
+                // WHEN MATCHED, and both moderators wanted the same end state anyway
+                mergeFlag(commentId);
+            }
+        } else {
+            jdbc.sql("DELETE FROM comment_flags WHERE comment_id = ?").params(commentId).update();
         }
+    }
+
+    /** The MERGE itself — a seam the retry test overrides to force the first pass to fail. */
+    void mergeFlag(String commentId) {
+        jdbc.sql("MERGE INTO comment_flags USING (VALUES (?)) AS src(comment_id) "
+                        + "ON comment_flags.comment_id = src.comment_id "
+                        + "WHEN MATCHED THEN UPDATE SET hidden = TRUE "
+                        + "WHEN NOT MATCHED THEN INSERT (comment_id, hidden) "
+                        + "VALUES (src.comment_id, TRUE)")
+                .params(commentId).update();
     }
 
     @Override

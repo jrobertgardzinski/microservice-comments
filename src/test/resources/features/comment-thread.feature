@@ -75,3 +75,31 @@ Feature: Comment threads under memes
     And her comment "Nie zdejmiesz" under the known meme
     When "bob" tries to hide that comment
     Then the hiding is refused as not-a-moderator
+
+  Scenario: hiding a COMMENT needs an unambiguous decision
+    Given a signed-in user
+    And her comment "Wciąż mnie widać" under the known meme
+    When a moderator asks about that comment without deciding hidden or not
+    Then the request is refused as undecided
+    And a reader still sees that comment's text
+
+  Scenario: a reader learns who wrote a COMMENT only as a masked name
+    Given a signed-in user
+    And her comment "Miło poznać" under the known meme
+    Then a reader learns who wrote it only as a masked name
+    And her full address appears nowhere in the listing
+
+  Scenario: the author still recognises their own words; a stranger does not claim them
+    Given a signed-in user
+    And her comment "To moje słowa" under the known meme
+    Then the author still recognises that comment as their own
+    But another signed-in user sees it as someone else's
+
+  Scenario: the thread survives the vote count going missing
+    Given a signed-in user
+    And her comment "Głosy to dodatek" under the known meme
+    And 2 users up-vote that comment
+    When the vote count becomes unavailable
+    Then the thread still shows that comment, its result unknown
+    When the vote count is back
+    Then the thread shows that comment with a score of 2

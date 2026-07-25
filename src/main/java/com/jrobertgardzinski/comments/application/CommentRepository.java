@@ -12,9 +12,10 @@ public interface CommentRepository {
 
     List<Comment> findByMeme(String memeId);
 
-    /** One page of a meme's comments, oldest first (offset/limit); pairs with {@link #countByMeme}. */
+    /** One page of a meme's comments, oldest first (offset/limit). */
     List<Comment> findByMeme(String memeId, int offset, int limit);
 
+    /** The size of a meme's whole thread. Off the listing's hot path — no client used the total. */
     int countByMeme(String memeId);
 
     Optional<Comment> find(String commentId);

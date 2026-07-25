@@ -7,8 +7,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -60,13 +62,30 @@ class CommentControllerTest {
                         .contentType("application/json").content("{\"direction\":\"UP\"}"))
                 .andExpect(status().isOk());
 
-        // public read shows the comment; bob sees his own vote, anonymous does not
+        // public read shows the comment with the author MASKED (the full e-mail is PII and never
+        // leaves the service in a listing); bob sees his own vote, anonymous does not
         mockMvc.perform(get(memeUri))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("alice@example.com")))
+                .andExpect(content().string(containsString("a***@example.com")))
+                .andExpect(content().string(not(containsString("alice@example.com"))))
                 .andExpect(jsonPath("$[0].myVote").isEmpty());
         mockMvc.perform(get(memeUri).header("Authorization", AUTH_BOB))
                 .andExpect(jsonPath("$[0].myVote").value("UP"))
                 .andExpect(jsonPath("$[0].score").value(1));
+
+        // the author cannot recognise herself by the masked e-mail any more — "own" answers that
+        // (the gallery UI shows its delete button from this flag, not from an author comparison)
+        mockMvc.perform(get(memeUri).header("Authorization", AUTH))
+                .andExpect(jsonPath("$[0].own").value(true));
+        mockMvc.perform(get(memeUri).header("Authorization", AUTH_BOB))
+                .andExpect(jsonPath("$[0].own").value(false));
+        mockMvc.perform(get(memeUri))
+                .andExpect(jsonPath("$[0].own").value(false));
+
+        // a hide request without the flag is malformed — refused, not defaulted to "reveal"
+        mockMvc.perform(put(memeUri + "/" + commentId + "/hidden").header("Authorization", AUTH)
+                        .contentType("application/json").content("{\"hidden\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("MISSING_HIDDEN"));
     }
 }

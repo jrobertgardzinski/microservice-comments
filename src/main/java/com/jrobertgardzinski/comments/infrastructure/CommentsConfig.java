@@ -16,12 +16,21 @@ import com.jrobertgardzinski.comments.config.RateLimit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.Optional;
 
 /**
  * Wires the framework-free use cases as beans and lets the gallery UI (served by
  * microservice-memes) call this service cross-origin.
+ *
+ * <p>The multi-step teardown use cases (delete a comment, purge a leaver, drop a thread) are
+ * wrapped in a transaction HERE, as bean decorators — one crash can no longer leave votes without
+ * their comment or half a purged account. The use cases themselves stay framework-free; the
+ * boundary owns the transaction, exactly like it owns HTTP and Kafka.
  */
 @Configuration
 class CommentsConfig {
@@ -37,8 +46,16 @@ class CommentsConfig {
     }
 
     @Bean
-    DeleteComment deleteComment(CommentRepository commentRepository, CommentVotes commentVotes) {
-        return new DeleteComment(commentRepository, commentVotes);
+    DeleteComment deleteComment(CommentRepository commentRepository, CommentVotes commentVotes,
+                                PlatformTransactionManager transactionManager) {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        // purge votes + delete comment must land or fail together
+        return new DeleteComment(commentRepository, commentVotes) {
+            @Override
+            public Result execute(String commentId, String caller, boolean callerIsModerator) {
+                return tx.execute(status -> super.execute(commentId, caller, callerIsModerator));
+            }
+        };
     }
 
     @Bean
@@ -64,13 +81,29 @@ class CommentsConfig {
 
     @Bean
     PurgeUserComments purgeUserComments(CommentRepository commentRepository, CommentVotes commentVotes,
-                                        PurgeRule defaultCommentsPurgeRule) {
-        return new PurgeUserComments(commentRepository, commentVotes, defaultCommentsPurgeRule);
+                                        PurgeRule defaultCommentsPurgeRule,
+                                        PlatformTransactionManager transactionManager) {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        // the whole GDPR sweep is one unit: a crash mid-purge must not leave half an account gone
+        return new PurgeUserComments(commentRepository, commentVotes, defaultCommentsPurgeRule) {
+            @Override
+            public void execute(String author, Optional<PurgeRule> requested) {
+                tx.executeWithoutResult(status -> super.execute(author, requested));
+            }
+        };
     }
 
     @Bean
-    DeleteThread deleteThread(CommentRepository commentRepository, CommentVotes commentVotes) {
-        return new DeleteThread(commentRepository, commentVotes);
+    DeleteThread deleteThread(CommentRepository commentRepository, CommentVotes commentVotes,
+                              PlatformTransactionManager transactionManager) {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        // per-comment vote purges + the thread delete land together (the cascade stays idempotent)
+        return new DeleteThread(commentRepository, commentVotes) {
+            @Override
+            public void execute(String memeId) {
+                tx.executeWithoutResult(status -> super.execute(memeId));
+            }
+        };
     }
 
     @Bean

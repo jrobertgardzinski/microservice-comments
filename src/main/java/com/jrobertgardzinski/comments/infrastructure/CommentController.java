@@ -103,9 +103,15 @@ class CommentController {
     private static Map<String, Object> toBody(CommentWithScore entry) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", entry.comment().id());
-        body.put("author", entry.comment().author());
-        body.put("score", entry.tally().score());
-        body.put("myVote", entry.tally().voterChoice().map(Enum::name).orElse(null));
+        body.put("author", maskAuthor(entry.comment().author()));
+        // the full author never leaves the service, so the UI cannot compare it against the
+        // signed-in user any more — "own" carries that answer instead (from the viewer's token)
+        body.put("own", entry.viewerIsAuthor());
+        // a null tally means the vote store was unavailable: score/myVote are unknown ("n/a"
+        // client-side), not zero — the thread itself still lists
+        body.put("score", entry.tally() == null ? null : entry.tally().score());
+        body.put("myVote", entry.tally() == null ? null
+                : entry.tally().voterChoice().map(Enum::name).orElse(null));
         if (entry.hidden()) {
             // a tombstone for readers; the author still sees their own words, marked hidden
             body.put("hidden", true);
@@ -123,8 +129,14 @@ class CommentController {
                            @RequestBody HideRequest request,
                            @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                    required = false) java.util.Set<String> roles) {
+        if (request.hidden() == null) {
+            // an absent flag is a malformed request, not a request to reveal — refuse it loudly
+            // instead of silently defaulting to false
+            return ResponseEntity.badRequest().body(Map.of("status", "MISSING_HIDDEN",
+                    "detail", "the body must carry hidden: true or false"));
+        }
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        boolean hidden = Boolean.TRUE.equals(request.hidden());
+        boolean hidden = request.hidden();
         HideComment.Status status = hideComment.execute(commentId, hidden, moderator);
         return switch (status) {
             case UPDATED -> ResponseEntity.ok(Map.of("status", hidden ? "HIDDEN" : "REVEALED", "id", commentId));
@@ -169,6 +181,20 @@ class CommentController {
                     "detail", "only the author or a moderator can delete this comment"));
             case NO_SUCH_COMMENT -> ResponseEntity.notFound().build();
         };
+    }
+
+    /**
+     * The public face of an author: first character, then {@code ***}, then the domain —
+     * enough for "same person across the thread", no full e-mail for scrapers. Internally
+     * (authorisation, purges) the full e-mail still flows; only this representation masks.
+     * Non-e-mail authors (the "deleted account" placeholder) pass through untouched.
+     */
+    private static String maskAuthor(String author) {
+        int at = author.indexOf('@');
+        if (at <= 0) {
+            return author;
+        }
+        return author.charAt(0) + "***" + author.substring(at);
     }
 
     private static Optional<VoteDirection> parseDirection(VoteRequest request) {

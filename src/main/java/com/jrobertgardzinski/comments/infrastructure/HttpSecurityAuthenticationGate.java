@@ -2,11 +2,13 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.slf4j.MDC;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -25,7 +27,13 @@ class HttpSecurityAuthenticationGate implements SecurityAuthenticationGate {
     private final RestClient securityService;
 
     HttpSecurityAuthenticationGate(@Value("${security.url}") String securityUrl) {
-        this.securityService = RestClient.create(securityUrl);
+        // bounded waits: without them a hung security service would pin every request thread on
+        // token introspection; a timeout falls into the catch below and reads as "not signed in"
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(2));
+        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        this.securityService = RestClient.builder().baseUrl(securityUrl)
+                .requestFactory(requestFactory).build();
     }
 
     @Override

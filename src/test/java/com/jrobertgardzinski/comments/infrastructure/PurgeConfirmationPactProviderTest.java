@@ -54,6 +54,9 @@ class PurgeConfirmationPactProviderTest {
     @SuppressWarnings("unchecked")
     public String aUserContentPurgedConfirmation() throws Exception {
         KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
+        // the listener now watches the send's future for failures; the mock must hand one back
+        org.mockito.Mockito.when(kafka.send(org.mockito.ArgumentMatchers.any(ProducerRecord.class)))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
         PurgeCommandsListener listener =
                 new PurgeCommandsListener(mock(PurgeUserComments.class), kafka, new ObjectMapper());
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\","

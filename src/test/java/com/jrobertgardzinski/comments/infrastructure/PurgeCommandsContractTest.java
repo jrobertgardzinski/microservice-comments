@@ -12,15 +12,20 @@ import au.com.dius.pact.core.model.messaging.MessagePact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * The consumer's half of the account-deletion saga contract: the pact states the exact shape of
@@ -40,6 +45,13 @@ class PurgeCommandsContractTest {
     private final KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
     private final PurgeCommandsListener listener =
             new PurgeCommandsListener(purgeUserComments, kafka, new ObjectMapper());
+
+    @BeforeEach
+    void kafkaSendSucceeds() {
+        // the listener now watches the send's future for failures; the mock must hand one back
+        when(kafka.send(any(ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+    }
 
     @Pact(consumer = "microservice-comments")
     MessagePact purgeCommand(MessagePactBuilder builder) {

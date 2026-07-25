@@ -32,7 +32,9 @@ class CorrelationIdFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String cid = request.getHeader(HEADER);
+        // the inbound header is attacker-controlled and lands in MDC, log lines and the response
+        // header — strip anything beyond [A-Za-z0-9_-] and cap the length before trusting it
+        String cid = sanitize(request.getHeader(HEADER));
         if (cid == null || cid.isBlank()) {
             cid = UUID.randomUUID().toString().substring(0, 8);
         }
@@ -44,5 +46,16 @@ class CorrelationIdFilter extends OncePerRequestFilter {
         } finally {
             MDC.remove(MDC_KEY);
         }
+    }
+
+    private static final int MAX_CID_LENGTH = 64;
+
+    /** Only [A-Za-z0-9_-], at most {@value #MAX_CID_LENGTH} characters; null stays null. */
+    private static String sanitize(String cid) {
+        if (cid == null) {
+            return null;
+        }
+        String cleaned = cid.replaceAll("[^A-Za-z0-9_-]", "");
+        return cleaned.length() > MAX_CID_LENGTH ? cleaned.substring(0, MAX_CID_LENGTH) : cleaned;
     }
 }

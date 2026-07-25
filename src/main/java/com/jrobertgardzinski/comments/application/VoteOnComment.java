@@ -21,8 +21,14 @@ public class VoteOnComment {
     }
 
     public Optional<VoteTally> execute(String memeId, String commentId, String voter, VoteDirection direction) {
-        return commentRepository.find(commentId)
-                .filter(comment -> comment.memeId().equals(memeId))
-                .map(comment -> voting.toggle(commentId, voter, direction));
+        try {
+            return commentRepository.find(commentId)
+                    .filter(comment -> comment.memeId().equals(memeId))
+                    .map(comment -> voting.toggle(commentId, voter, direction));
+        } catch (CommentVotes.UnknownComment deletedMidVote) {
+            // the comment passed the check above but was deleted before the ballot landed (the
+            // store's foreign key caught it) — same outcome as failing the check: no such comment
+            return Optional.empty();
+        }
     }
 }

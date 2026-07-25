@@ -55,22 +55,41 @@ class PurgeCommandsListener {
         try {
             command = mapper.readTree(payload);
         } catch (Exception malformed) {
-            LOG.warn("dropping malformed command: {}", payload);
+            // NOT the payload itself: a purge command carries the leaver's e-mail, and even a
+            // malformed one may — PII stays out of the logs, the size is enough to investigate
+            LOG.warn("dropping a malformed command ({} chars, not valid JSON)",
+                    payload == null ? 0 : payload.length());
             return;
         }
         if (!"PURGE_USER_CONTENT".equals(command.path("type").asText())) {
             return;
         }
+        String sagaId = command.path("sagaId").asText();
         String email = command.path("email").asText();
+        if (email.isBlank()) {
+            // no email, nothing to purge and no key to confirm under — drop WITHOUT confirming,
+            // so the orchestrator's timeout (not a hollow success) surfaces the broken command
+            LOG.warn("dropping PURGE_USER_CONTENT without an email (saga {})", sagaId);
+            return;
+        }
         purgeUserComments.execute(email, requestedRule(command));
-        LOG.info("purged comments of {} (saga {})", email, command.path("sagaId").asText());
+        // the saga id identifies the run in logs; the e-mail is PII and stays out of INFO lines
+        LOG.info("purged the comments of one leaver (saga {})", sagaId);
         // forward the cid on the confirmation so security's listener continues the same trace
         kafka.send(KafkaTracing.withCid("comments-events", email, mapper.writeValueAsString(mapper.createObjectNode()
-                .put("type", "USER_CONTENT_PURGED")
-                .put("sagaId", command.path("sagaId").asText())
-                .put("email", email)
-                // envelope version (workspace ADR 0004): fields only ever added within version 1
-                .put("version", 1))));
+                        .put("type", "USER_CONTENT_PURGED")
+                        .put("sagaId", sagaId)
+                        .put("email", email)
+                        // envelope version (workspace ADR 0004): fields only ever added within version 1
+                        .put("version", 1))))
+                // fire-and-forget hides broker trouble; at least leave a trace when the send fails
+                // (the orchestrator's timeout will retry the command — the purge is idempotent)
+                .whenComplete((confirmation, failure) -> {
+                    if (failure != null) {
+                        LOG.error("failed to send the USER_CONTENT_PURGED confirmation (saga {})",
+                                sagaId, failure);
+                    }
+                });
     }
 
     private Optional<PurgeRule> requestedRule(JsonNode command) {

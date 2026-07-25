@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure.cucumber;
 
 import com.jrobertgardzinski.comments.infrastructure.TestAuthConfig;
+import com.jrobertgardzinski.comments.infrastructure.VoteStoreOutageConfig;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,12 +34,18 @@ public class CommentThreadSteps {
     @Autowired
     Consumer<String> memesEventsAnnouncer;
 
+    @Autowired
+    VoteStoreOutageConfig.OutageProneCommentVotes voteStore;
+
     private String memeId;
     private String commentId;
+    private String commentText;
     private Response lastResponse;
 
     @Before
     public void aCleanSlate() {
+        // a previous scenario may have left the vote store "down"; heal it before the cascade
+        voteStore.outage(false);
         // scenarios share one app and one H2; the cascade is also the perfect thread reset
         memesEventsAnnouncer.accept(
                 "{\"type\":\"MEME_DELETED\",\"memeId\":\"" + TestAuthConfig.EXISTING_MEME + "\"}");
@@ -52,6 +60,7 @@ public class CommentThreadSteps {
     public void sheComments(String text) {
         lastResponse = comment(TestAuthConfig.VALID_TOKEN, TestAuthConfig.EXISTING_MEME, text);
         commentId = lastResponse.statusCode() == 201 ? lastResponse.jsonPath().getString("id") : null;
+        commentText = text;
     }
 
     @Given("her comment {string} under the known meme")
@@ -97,8 +106,12 @@ public class CommentThreadSteps {
     public void threadShowsComments(int expected) {
         List<String> authors = thread().jsonPath().getList("author", String.class);
         assertEquals(expected, authors.size());
-        assertTrue(authors.stream().allMatch(TestAuthConfig.SIGNED_IN_USER::equals),
-                "the author is the confirmed identity, not a request field");
+        // the listing masks the author's e-mail: first character + *** + domain
+        String masked = TestAuthConfig.SIGNED_IN_USER.charAt(0) + "***"
+                + TestAuthConfig.SIGNED_IN_USER.substring(TestAuthConfig.SIGNED_IN_USER.indexOf('@'));
+        assertTrue(authors.stream().allMatch(masked::equals),
+                "the author is the confirmed identity (masked for the public listing),"
+                        + " not a request field");
     }
 
     @Then("the comment is refused as sign-in required")
@@ -236,6 +249,75 @@ public class CommentThreadSteps {
     public void hidingRefused() {
         assertEquals(403, lastResponse.statusCode());
         assertEquals("NOT_A_MODERATOR", lastResponse.jsonPath().getString("status"));
+    }
+
+    @When("a moderator asks about that comment without deciding hidden or not")
+    public void moderatorSendsNoDecision() {
+        lastResponse = RestAssured.given().port(port)
+                .header("Authorization", "Bearer " + TestAuthConfig.MODERATOR_TOKEN)
+                .contentType("application/json")
+                .body("{}")
+                .put("/memes/{memeId}/comments/{commentId}/hidden",
+                        TestAuthConfig.EXISTING_MEME, commentId);
+    }
+
+    @Then("the request is refused as undecided")
+    public void refusedAsUndecided() {
+        assertEquals(400, lastResponse.statusCode(),
+                "no decision is a malformed request, not a quiet reveal");
+        assertEquals("MISSING_HIDDEN", lastResponse.jsonPath().getString("status"));
+    }
+
+    @Then("a reader still sees that comment's text")
+    public void readerStillSeesText() {
+        var comment = threadEntry(null, commentId);
+        assertNull(comment.get("hidden"), "an undecided request must not touch the comment");
+        assertEquals(commentText, comment.get("text"));
+    }
+
+    @Then("a reader learns who wrote it only as a masked name")
+    public void readerSeesOnlyMaskedName() {
+        String masked = TestAuthConfig.SIGNED_IN_USER.charAt(0) + "***"
+                + TestAuthConfig.SIGNED_IN_USER.substring(TestAuthConfig.SIGNED_IN_USER.indexOf('@'));
+        assertEquals(masked, threadEntry(null, commentId).get("author"),
+                "the public listing signs a comment with a masked name");
+    }
+
+    @Then("her full address appears nowhere in the listing")
+    public void fullAddressAppearsNowhere() {
+        assertFalse(thread().asString().contains(TestAuthConfig.SIGNED_IN_USER),
+                "the full e-mail address must never leave the service in a listing");
+    }
+
+    @Then("the author still recognises that comment as their own")
+    public void authorRecognisesOwn() {
+        assertEquals(Boolean.TRUE, threadEntry(TestAuthConfig.VALID_TOKEN, commentId).get("own"),
+                "behind the masked name, the author still recognises their own words");
+    }
+
+    @Then("another signed-in user sees it as someone else's")
+    public void strangerDoesNotClaimIt() {
+        assertEquals(Boolean.FALSE, threadEntry(TestAuthConfig.SECOND_TOKEN, commentId).get("own"),
+                "a stranger's comment is not marked as the viewer's own");
+    }
+
+    @When("the vote count becomes unavailable")
+    public void voteCountBecomesUnavailable() {
+        voteStore.outage(true);
+    }
+
+    @When("the vote count is back")
+    public void voteCountIsBack() {
+        voteStore.outage(false);
+    }
+
+    @Then("the thread still shows that comment, its result unknown")
+    public void threadStillListsWithUnknownScore() {
+        var comment = threadEntry(null, commentId);
+        assertEquals(commentText, comment.get("text"),
+                "votes are a side dish — the thread still lists without them");
+        assertNull(comment.get("score"), "with the count gone the result is unknown, not zero");
+        assertNull(comment.get("myVote"));
     }
 
     private Response setHidden(String token, boolean hidden) {
