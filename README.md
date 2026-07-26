@@ -19,6 +19,12 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
 - **microservice-memes** — meme existence checks (HEAD) so comments never attach to ghosts, and
   the `MEME_DELETED` events on `memes-events`: when a meme goes, this service drops its whole
   thread (eventually consistent, idempotent).
+- **microservice-user-collections** — the next hop of that same cascade. Having dropped the thread,
+  this service announces `COMMENTS_DELETED` on `comments-events` naming every comment it took,
+  because nobody else ever knew which comments hung under that meme. Choreography, not saga: no
+  orchestrator, no compensation, no outbox — a lost announcement costs a stale reference that the
+  UI's read-repair drops, and an emptied thread (no comments, or a redelivered event) announces
+  nothing at all. Deleting a single comment does not announce anything either; only the cascade does.
 - **Kafka / the account-deletion saga** — `PURGE_USER_CONTENT` on `content-commands` purges the
   leaver's comments under this service's axis of the policy (`DELETE` | `ANONYMIZE_AUTHOR` |
   `KEEP_POPULAR_ANONYMIZED:<n>`; wizard override wins over the `PURGE_COMMENTS_POLICY` default);

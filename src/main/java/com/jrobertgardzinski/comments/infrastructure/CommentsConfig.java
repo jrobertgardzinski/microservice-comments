@@ -21,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -97,11 +98,13 @@ class CommentsConfig {
     DeleteThread deleteThread(CommentRepository commentRepository, CommentVotes commentVotes,
                               PlatformTransactionManager transactionManager) {
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
-        // per-comment vote purges + the thread delete land together (the cascade stays idempotent)
+        // per-comment vote purges + the thread delete land together (the cascade stays idempotent).
+        // The dropped ids come back THROUGH the transaction: a caller holding them holds proof of
+        // a commit, which is what lets MemesEventsListener announce them without an outbox
         return new DeleteThread(commentRepository, commentVotes) {
             @Override
-            public void execute(String memeId) {
-                tx.executeWithoutResult(status -> super.execute(memeId));
+            public List<String> execute(String memeId) {
+                return tx.execute(status -> super.execute(memeId));
             }
         };
     }

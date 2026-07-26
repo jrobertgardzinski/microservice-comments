@@ -78,7 +78,9 @@ class PurgeCommandsListener {
         // the saga id identifies the run in logs; the e-mail is PII and stays out of INFO lines
         LOG.info("purged the comments of one leaver (saga {})", sagaId);
         // forward the cid on the confirmation so security's listener continues the same trace
-        kafka.send(KafkaTracing.withCid("comments-events", email, mapper.writeValueAsString(mapper.createObjectNode()
+        // the same topic the cascade's COMMENTS_DELETED rides (constant shared so the two
+        // producers cannot drift apart); consumers tell the traffic apart by "type"
+        kafka.send(KafkaTracing.withCid(KafkaCommentEvents.TOPIC, email, mapper.writeValueAsString(mapper.createObjectNode()
                         .put("type", "USER_CONTENT_PURGED")
                         .put("sagaId", sagaId)
                         .put("email", email)

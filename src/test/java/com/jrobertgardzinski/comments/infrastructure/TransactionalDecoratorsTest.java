@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * mid-teardown crash and half-done state — nothing else guarded them until this test. It takes
  * the DECORATED beans from the context (not freshly built use cases), makes the LAST port call of
  * a teardown blow up, and asserts on the real database that the earlier steps were rolled back.
+ *
+ * <p>The thread cascade is here for a second reason: its COMMENTS_DELETED announcement has no
+ * outbox behind it, so "a rollback never announces" rests entirely on the announcement living
+ * OUTSIDE the transaction (in MemesEventsListener, after the decorated use case returned). That
+ * arrangement is only worth as much as a test against a real transaction manager proves it to be.
  */
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class,
         TransactionalDecoratorsTest.FailingPorts.class})
@@ -49,6 +55,7 @@ class TransactionalDecoratorsTest {
 
         static final Set<String> failDeleteOf = ConcurrentHashMap.newKeySet();
         static final Set<String> failPurgeVoterOf = ConcurrentHashMap.newKeySet();
+        static final Set<String> failDeleteByMemeOf = ConcurrentHashMap.newKeySet();
 
         @Bean
         @Primary
@@ -69,7 +76,12 @@ class TransactionalDecoratorsTest {
                     }
                     real.delete(commentId);
                 }
-                public void deleteByMeme(String memeId) { real.deleteByMeme(memeId); }
+                public void deleteByMeme(String memeId) {
+                    if (failDeleteByMemeOf.contains(memeId)) {
+                        throw new DataAccessResourceFailureException("forced crash on the last step");
+                    }
+                    real.deleteByMeme(memeId);
+                }
                 public void reassignAuthor(String commentId, String newAuthor) {
                     real.reassignAuthor(commentId, newAuthor);
                 }
@@ -113,11 +125,17 @@ class TransactionalDecoratorsTest {
     CommentVotes votes;
     @Autowired
     JdbcClient jdbc;
+    @Autowired
+    Consumer<String> memesEventsAnnouncer;              // the MEME_DELETED listener, broker-less
+    @Autowired
+    TestAuthConfig.RecordedCommentEvents cascadeAnnouncements;
 
     @AfterEach
     void disarm() {
         FailingPorts.failDeleteOf.clear();
         FailingPorts.failPurgeVoterOf.clear();
+        FailingPorts.failDeleteByMemeOf.clear();
+        cascadeAnnouncements.forget();
     }
 
     @Test
@@ -156,6 +174,53 @@ class TransactionalDecoratorsTest {
         // restored the author — half an executed GDPR sweep is worse than a retried one
         assertEquals(2, repository.findByAuthor(leaver).size(),
                 "the anonymisation must be rolled back with the failed final step");
+    }
+
+    @Test
+    @DisplayName("DeleteThread: a committed cascade drops votes and thread, then names what it dropped")
+    void delete_thread_announces_only_after_the_commit() {
+        String memeId = UUID.randomUUID().toString();
+        String first = comment(memeId, "one");
+        String second = comment(memeId, "two");
+        votes.cast(first, "fan@example.com", VoteDirection.UP);
+
+        memesEventsAnnouncer.accept("{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId + "\"}");
+
+        assertTrue(repository.findByMeme(memeId).isEmpty(), "the thread goes with the meme");
+        assertEquals(0, voteRows(first), "and so do its votes");
+        assertEquals(List.of(new TestAuthConfig.RecordedCommentEvents.Announcement(
+                        memeId, List.of(first, second))),
+                cascadeAnnouncements.announcements(),
+                "one announcement, naming exactly the comments that went");
+    }
+
+    @Test
+    @DisplayName("DeleteThread: a crash on the thread delete rolls the vote purges back — and announces nothing")
+    void delete_thread_is_atomic_and_silent_on_rollback() {
+        String memeId = UUID.randomUUID().toString();
+        String first = comment(memeId, "survives");
+        String second = comment(memeId, "survives too");
+        votes.cast(first, "fan@example.com", VoteDirection.UP);
+        votes.cast(second, "hater@example.com", VoteDirection.DOWN);
+
+        FailingPorts.failDeleteByMemeOf.add(memeId);
+        assertThrows(DataAccessResourceFailureException.class, () -> memesEventsAnnouncer.accept(
+                "{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId + "\"}"));
+
+        // the per-comment vote purges ran before the crash and must be back
+        assertEquals(2, repository.findByMeme(memeId).size(), "the thread must survive the crash");
+        assertEquals(1, voteRows(first), "the purged votes must be rolled back");
+        assertEquals(1, voteRows(second));
+        // and the point of announcing only from OUTSIDE the transaction: nothing left the building
+        assertTrue(cascadeAnnouncements.announcements().isEmpty(),
+                "a rollback must never let COMMENTS_DELETED out — the comments are still there");
+    }
+
+    /** A comment straight into the store (this test is about teardown, not about posting). */
+    private String comment(String memeId, String text) {
+        String id = UUID.randomUUID().toString();
+        repository.save(new Comment(id, memeId, "author@example.com", text));
+        return id;
     }
 
     private long voteRows(String commentId) {

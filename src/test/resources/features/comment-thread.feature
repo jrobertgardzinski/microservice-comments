@@ -3,7 +3,8 @@ Feature: Comment threads under memes
   Signed-in users discuss under an existing meme; the COMMENT's author comes from the security
   service, not from the request body. Votes on a COMMENT are one-per-user toggles, and the listing
   carries each COMMENT's score. When a meme is deleted, its whole thread of COMMENTs disappears
-  with it.
+  with it — and, because this service is the only one that knew which COMMENTs hung there, it
+  passes that list on to whoever saved them.
 
   Scenario: a signed-in user comments and the thread lists it
     Given a signed-in user
@@ -48,6 +49,7 @@ Feature: Comment threads under memes
     Then the deletion is refused as not-theirs
     When she deletes that comment
     Then the thread of the known meme is empty
+    And nothing is announced to the collections service
 
   Scenario: a moderator deletes someone else's COMMENT
     Given a signed-in user
@@ -55,11 +57,18 @@ Feature: Comment threads under memes
     When a moderator deletes that comment
     Then the thread of the known meme is empty
 
-  Scenario: a deleted meme takes its whole thread with it
+  Scenario: a deleted meme takes its whole thread with it, and the cascade passes the baton on
     Given a signed-in user
     And her comment "Znikne razem z memem" under the known meme
     When the meme service announces the meme was deleted
     Then the thread of the known meme is empty
+    And the collections service is told which comments went
+
+  Scenario: a meme nobody commented on is announced to nobody
+    Given a signed-in user
+    When the meme service announces the meme was deleted
+    Then the thread of the known meme is empty
+    And nothing is announced to the collections service
 
   Scenario: a moderator hides a COMMENT; readers see a tombstone, the author still sees their words
     Given a signed-in user

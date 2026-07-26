@@ -114,9 +114,21 @@ class PurgeAndCascadeTest {
         comments.add(new Comment("c3", "other", "a@example.com", "stays"));
         votes.put("c1", new HashMap<>(Map.of("x@example.com", VoteDirection.UP)));
 
-        new DeleteThread(repository, commentVotes).execute("gone-meme");
+        List<String> dropped = new DeleteThread(repository, commentVotes).execute("gone-meme");
 
         assertEquals(List.of("c3"), comments.stream().map(Comment::id).toList());
         assertTrue(votes.isEmpty() || !votes.containsKey("c1"));
+        // the cascade also REPORTS what it took: this service is the only one that ever knew which
+        // comments hung under that meme, so the next hop of the choreography rides on this list
+        assertEquals(List.of("c1", "c2"), dropped, "every dropped comment, and no other meme's");
+    }
+
+    @Test
+    @DisplayName("a meme nobody commented on reports nothing to pass on")
+    void thread_cascade_on_an_empty_thread() {
+        comments.add(new Comment("c1", "other", "a@example.com", "stays"));
+
+        assertEquals(List.of(), new DeleteThread(repository, commentVotes).execute("quiet-meme"),
+                "no comments went, so there is no fact to announce (and a rerun says the same)");
     }
 }

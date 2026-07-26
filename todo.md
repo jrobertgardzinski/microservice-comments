@@ -11,6 +11,11 @@ Tylko otwarte rzeczy. Historia = git log.
 - Saga usuwania konta: oś komentarzy (reguły DELETE|ANONYMIZE_AUTHOR|KEEP_POPULAR_ANONYMIZED:n,
   wybór z wizarda nadpisuje default), potwierdzenie na `comments-events`.
 - Kaskada `MEME_DELETED` → wątek znika razem z memem.
+- **Drugi skok kaskady** (2026-07-26): po skasowaniu wątku serwis ogłasza `COMMENTS_DELETED`
+  na `comments-events` (envelope v1: `id/type/memeId/commentIds/version`, klucz = `memeId`) —
+  tylko ten serwis wie, KTÓRE komentarze wisiały pod memem. Bez outboxa (stawka = martwy ref,
+  naprawi read-repair w UI), ale publikacja tylko po udanym commicie: `DeleteThread` zwraca
+  listę id, ogłasza dopiero `MemesEventsListener` spoza transakcji. Pusty wątek = brak zdarzenia.
 
 ## Zrobione (cd.)
 - **Offline JWT gate** — ZROBIONE (2026-07-06, `7609b7c`+`bc408b8`): `JwtSecurityAuthenticationGate`
@@ -41,6 +46,13 @@ Tylko otwarte rzeczy. Historia = git log.
   malutką libkę, jeśli urośnie trzeci konsument.
 - **Deduplikacja konsumenta** — purge idempotentny, więc zbędna; przy nie-idempotentnych
   komendach dołożyć dedup po id.
+- **PROPOZYCJA (NIE IMPLEMENTOWAĆ bez zgody) — `COMMENTS_DELETED` też przy pojedynczym kasowaniu.**
+  Dziś tylko kaskada ogłasza; skasowanie jednego komentarza przez autora/moderatora zostawia
+  w collections dokładnie taki sam martwy ref. Koperta już to unosi (`commentIds` z jednym id),
+  więc kontrakt się nie zmienia — zmienia się miejsce publikacji: `DeleteComment` musiałby zwracać
+  skasowane id, a ogłaszałby `CommentController` (analogicznie: spoza transakcji, po commicie),
+  czyli publikacja wchodzi na ścieżkę HTTP. Koszt: dużo częstsze zdarzenia. Zysk: mniej pracy dla
+  read-repair. Do decyzji razem z właścicielem collections.
 - ~~Paginacja / limity długości wątków / rate-limit~~ — ZROBIONE (2026-07-04): listing
   stronicowany (`GET ...?page=&size=`, size cap 100, domyślnie 50; port findByMeme(offset,limit)
   + countByMeme; `ListComments.Page` z hasMore), limit długości komentarza w DOMENIE

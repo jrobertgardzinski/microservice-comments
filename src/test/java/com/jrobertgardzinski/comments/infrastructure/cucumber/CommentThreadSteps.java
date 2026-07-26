@@ -37,6 +37,9 @@ public class CommentThreadSteps {
     @Autowired
     VoteStoreOutageConfig.OutageProneCommentVotes voteStore;
 
+    @Autowired
+    TestAuthConfig.RecordedCommentEvents cascadeAnnouncements;
+
     private String memeId;
     private String commentId;
     private String commentText;
@@ -49,6 +52,8 @@ public class CommentThreadSteps {
         // scenarios share one app and one H2; the cascade is also the perfect thread reset
         memesEventsAnnouncer.accept(
                 "{\"type\":\"MEME_DELETED\",\"memeId\":\"" + TestAuthConfig.EXISTING_MEME + "\"}");
+        // ...which means the reset itself may have announced the previous scenario's comments
+        cascadeAnnouncements.forget();
     }
 
     @Given("a signed-in user")
@@ -135,6 +140,26 @@ public class CommentThreadSteps {
     public void threadIsEmpty() {
         assertEquals(0, thread().jsonPath().getList("id").size(),
                 "the cascade took the whole thread with the meme");
+    }
+
+    @Then("the collections service is told which comments went")
+    public void collectionsIsToldWhichCommentsWent() {
+        // the essence of the choreography: memes knows only that the meme is gone — which comments
+        // hung under it is knowledge only this service has, so only this service can pass it on
+        assertEquals(1, cascadeAnnouncements.announcements().size(),
+                "one dropped thread, one announcement");
+        var announced = cascadeAnnouncements.announcements().get(0);
+        assertEquals(TestAuthConfig.EXISTING_MEME, announced.memeId());
+        assertEquals(List.of(commentId), announced.commentIds(),
+                "the announcement names every comment that went, by id");
+    }
+
+    @Then("nothing is announced to the collections service")
+    public void nothingIsAnnounced() {
+        assertTrue(cascadeAnnouncements.announcements().isEmpty(),
+                "COMMENTS_DELETED belongs to the MEME_DELETED cascade alone, and only when it "
+                        + "actually took comments — a single deletion by its author is nobody "
+                        + "else's business, and an empty list is pure noise");
     }
 
     private Response lastPage;
