@@ -108,9 +108,9 @@ class KafkaCommentEvents implements CommentEvents {
         // partition, so a consumer never sees the comments' fate before the meme's
         // the cid is read from the MDC HERE, at announce time — while the listener that started
         // this cascade hop still has it — and stored in the row, because the send may happen again
-        // hours later on a scheduler thread with no trace context at all. That is the one thing
-        // KafkaTracing.withCid (still right for the saga's confirmations, which are never
-        // republished) cannot do, and the reason this class does not use it.
+        // hours later on a scheduler thread with no trace context at all — which is why reading the
+        // MDC at SEND time (what the saga's confirmations did until round 11, when they joined this
+        // outbox) is not an option for anything the republisher may re-send.
         return new OutboxEvent(eventId, TOPIC, COMMENTS_DELETED, memeId,
                 MDC.get(CorrelationIdFilter.MDC_KEY), payload);
     }

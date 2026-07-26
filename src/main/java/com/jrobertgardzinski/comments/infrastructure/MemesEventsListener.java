@@ -61,7 +61,13 @@ class MemesEventsListener {
         this.tx = tx;
     }
 
-    @KafkaListener(topics = "memes-events", groupId = "comments")
+    /**
+     * The container id is spelled out (the group id is unchanged): it is what
+     * {@link SagaListenersHealth} prints under {@code /actuator/health}, and with two listeners in this
+     * service the lamp has to be able to say WHICH loop stopped — a stalled cascade leaves deleted
+     * memes with their comment threads, a stalled saga listener stops account deletions closing.
+     */
+    @KafkaListener(id = "comments-memes-events", topics = "memes-events", groupId = "comments")
     void receive(String payload,
                  @Header(name = KafkaTracing.HEADER, required = false) String cid) {
         if (cid != null) {

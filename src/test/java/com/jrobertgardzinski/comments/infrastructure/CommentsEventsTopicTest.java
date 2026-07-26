@@ -37,12 +37,15 @@ import static org.mockito.Mockito.when;
  * the two properties the filter depends on — the cascade event's type is not the confirmation's,
  * and it carries neither a {@code sagaId} nor an {@code email} that could make it look like one.
  *
- * <p>Worth re-running deliberately after round 10: the cascade's half of this topic now travels
- * through an outbox and can be RE-SENT, while the saga's confirmations still go straight out. The two
- * conversations no longer even share a delivery path, and this test is what keeps the one that
- * changed from disturbing the one that did not.
+ * <p>Worth re-running deliberately after round 11, which moved the SECOND half onto the outbox as
+ * well: both conversations now travel through one table, one republisher and one dispatch, and both can
+ * be RE-SENT. That makes the separation this test guards cheaper to get wrong, not more expensive — the
+ * two events are now built ten lines apart by the same mechanism, so "the cascade must not look like a
+ * confirmation" is a property worth re-asserting on every run.
  */
 class CommentsEventsTopicTest {
+
+    private static final String SAGA_OF_THE_KEYING_TEST = "b1a7c0de-0000-4000-8000-abcdefabcdef";
 
     /** The saga receiver's rule, transcribed from microservice-offboarding's EventsRouter#handle. */
     private static boolean theSagaListensTo(JsonNode event) {
@@ -58,8 +61,8 @@ class CommentsEventsTopicTest {
 
     private final OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
 
-    private final PurgeCommandsListener saga =
-            new PurgeCommandsListener(purgeUserComments, kafka, mapper);
+    private final PurgeCommandsListener saga = new PurgeCommandsListener(purgeUserComments,
+            new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
     private final MemesEventsListener cascade = new MemesEventsListener(deleteThread,
             new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());
 
@@ -106,15 +109,17 @@ class CommentsEventsTopicTest {
         String memeId = UUID.randomUUID().toString();
         when(deleteThread.execute(memeId)).thenReturn(List.of(UUID.randomUUID().toString()));
 
-        saga.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + UUID.randomUUID()
+        saga.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + SAGA_OF_THE_KEYING_TEST
                 + "\",\"email\":\"leaver@example.com\"}", null);
         cascade.receive("{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId + "\"}", null);
 
         List<ProducerRecord<String, String>> records = sentRecords(2);
         assertTrue(records.stream().allMatch(record -> "comments-events".equals(record.topic())),
                 "one topic per producing service — the type tells the traffic apart");
-        assertEquals("leaver@example.com", records.get(0).key(),
-                "a saga confirmation is about an account, so it is keyed by it");
+        assertEquals(SAGA_OF_THE_KEYING_TEST, records.get(0).key(),
+                "a saga confirmation is keyed by the saga RUN since round 11 — the outbox's event_key"
+                        + " is varchar(64) and an address may be 254, and a key is broker-visible"
+                        + " metadata that need not carry the address the payload already has");
         assertEquals(memeId, records.get(1).key(),
                 "a cascade announcement is about a meme, so it is keyed by it");
     }

@@ -60,10 +60,10 @@ final class KafkaCommentDispatch implements Dispatch {
 
     /**
      * The row rebuilt into the record the broker gets. The correlation id comes from the STORED
-     * event, not from the MDC — which is the difference between this and
-     * {@link KafkaTracing#withCid}, still used by the saga's confirmations. A republication happens
-     * on a scheduler thread hours later, where the ambient trace is empty or, worse, somebody
-     * else's.
+     * event, not from the MDC: a republication happens on a scheduler thread hours later, where the
+     * ambient trace is empty or, worse, somebody else's. Since round 11 both producers in this service
+     * are here — the saga's confirmations used to be stamped from the MDC instead, which was only ever
+     * right because they were never republished.
      */
     static ProducerRecord<String, String> toRecord(OutboxEvent event) {
         ProducerRecord<String, String> record =
