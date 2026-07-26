@@ -31,6 +31,11 @@ import static org.mockito.Mockito.when;
  * which saved comments just became dead references. These tests pin the announcement's contract —
  * and, just as hard, the three cases where silence is the contract: an empty thread, a rolled-back
  * cascade, and an event that is not a deletion.
+ *
+ * <p>Round 10 put a transactional outbox under the announcement, so the hop now runs in a real
+ * transaction against a real (one-table) database — see {@link OutboxTestDatabase}. Every assertion
+ * below is the round-9 one; what changed is that "a rollback lets nothing out" is now a statement
+ * about a transaction manager and a table rather than about the order of two lines of code.
  */
 class MemeDeletedCascadeTest {
 
@@ -38,8 +43,9 @@ class MemeDeletedCascadeTest {
     @SuppressWarnings("unchecked")
     private final KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
     private final ObjectMapper mapper = new ObjectMapper();
-    private final MemesEventsListener listener =
-            new MemesEventsListener(deleteThread, new KafkaCommentEvents(kafka, mapper), mapper);
+    private final OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
+    private final MemesEventsListener listener = new MemesEventsListener(deleteThread,
+            new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());
 
     private void sendSucceeds() {
         when(kafka.send(any(ProducerRecord.class)))
@@ -97,6 +103,9 @@ class MemeDeletedCascadeTest {
         // an empty COMMENTS_DELETED states no fact a consumer could act on, and the cascade is
         // idempotent — every redelivery of MEME_DELETED would re-emit it forever
         verifyNoInteractions(kafka);
+        assertEquals(0, db.rows(),
+                "and no outbox row either — silence must not be something the republisher"
+                        + " discovers later and breaks");
     }
 
     @Test
@@ -106,11 +115,13 @@ class MemeDeletedCascadeTest {
         when(deleteThread.execute(memeId))
                 .thenThrow(new DataAccessResourceFailureException("the thread delete blew up"));
 
-        // the transaction lives inside the (decorated) use case, so a rollback surfaces here as an
-        // exception — the listener never reaches the announcement, and Kafka redelivers the event
+        // the hop is one transaction, so a failure inside it rolls the whole thing back and
+        // surfaces here as an exception — no announcement is made, no outbox row survives, and
+        // Kafka redelivers the event so the (idempotent) hop runs again
         assertThrows(DataAccessResourceFailureException.class,
                 () -> listener.receive(memeDeleted(memeId), null));
         verifyNoInteractions(kafka);
+        assertEquals(0, db.rows(), "the announcement must share the fate of the delete");
     }
 
     @Test

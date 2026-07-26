@@ -6,6 +6,7 @@ import com.jrobertgardzinski.comments.application.MemeDirectory;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -81,12 +82,16 @@ public class TestAuthConfig {
     }
 
     /** The MEME_DELETED cascade, minus the broker: scenarios hand the listener a payload
-     *  directly (Kafka listeners are disabled in tests, so the real bean is absent). */
+     *  directly (Kafka listeners are disabled in tests, so the real bean is absent). The real
+     *  TransactionTemplate goes in, though — since round 10 the hop's transaction is the listener's,
+     *  and a scenario running it outside one would be testing an arrangement nobody deploys. */
     @Bean
     public Consumer<String> memesEventsAnnouncer(DeleteThread deleteThread,
                                                  RecordedCommentEvents commentEvents,
-                                                 ObjectMapper mapper) {
-        MemesEventsListener listener = new MemesEventsListener(deleteThread, commentEvents, mapper);
+                                                 ObjectMapper mapper,
+                                                 TransactionTemplate tx) {
+        MemesEventsListener listener =
+                new MemesEventsListener(deleteThread, commentEvents, mapper, tx);
         return payload -> listener.receive(payload, null);   // no cid on the direct, broker-less path
     }
 }

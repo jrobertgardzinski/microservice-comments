@@ -22,9 +22,17 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
 - **microservice-user-collections** — the next hop of that same cascade. Having dropped the thread,
   this service announces `COMMENTS_DELETED` on `comments-events` naming every comment it took,
   because nobody else ever knew which comments hung under that meme. Choreography, not saga: no
-  orchestrator, no compensation, no outbox — a lost announcement costs a stale reference that the
-  UI's read-repair drops, and an emptied thread (no comments, or a redelivered event) announces
-  nothing at all. Deleting a single comment does not announce anything either; only the cascade does.
+  orchestrator and no compensation — but since round 10 the announcement **is** durable. The thread
+  delete and the announcement's outbox row are one transaction (`comment_events_outbox`, V4), so a
+  rollback takes the announcement with it and a crash between the commit and the send loses nothing:
+  the row stays unpublished and the shared outbox library's republisher re-sends it, marking it only
+  once the broker confirms. That durability used to be judged not worth its price here, and the
+  judgement was about price: the mechanism is now a kernel library
+  (`com.jrobertgardzinski:transactional-outbox`, extracted from microservice-memes), so owning it
+  costs a migration and a config class. What tipped it is that the loss was unrepairable — an emptied
+  thread (no comments, or a redelivered event) announces nothing at all, so nothing ever re-derived a
+  lost announcement, and the only repair left was the UI's read-repair dropping a stale reference.
+  Deleting a single comment does not announce anything either; only the cascade does.
 - **Kafka / the account-deletion saga** — `PURGE_USER_CONTENT` on `content-commands` purges the
   leaver's comments under this service's axis of the policy (`DELETE` | `ANONYMIZE_AUTHOR` |
   `KEEP_POPULAR_ANONYMIZED:<n>`; wizard override wins over the `PURGE_COMMENTS_POLICY` default);

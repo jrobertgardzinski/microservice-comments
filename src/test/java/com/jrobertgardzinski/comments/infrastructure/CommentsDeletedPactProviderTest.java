@@ -101,8 +101,9 @@ class CommentsDeletedPactProviderTest {
      * <p>Two collaborators stand in, for the same reason as the {@code KafkaTemplate} mock in
      * {@link PurgeConfirmationPactProviderTest}: they are adapters, not the code under test. The
      * repository behind {@link DeleteThread} is a database, so the use case is stubbed to report the
-     * ids it dropped — everything that turns those ids into an announcement (the listener's
-     * publish-after-commit ordering, the envelope, the key, the topic) is the real thing.
+     * ids it dropped — everything that turns those ids into an announcement (the hop's transaction,
+     * the outbox row, the envelope, the key, the topic) is the real thing, down to a real H2 holding
+     * the row the record is built from.
      */
     @SuppressWarnings("unchecked")
     static ProducerRecord<String, String> realAnnouncement(String memeId, List<String> commentIds) {
@@ -112,8 +113,10 @@ class CommentsDeletedPactProviderTest {
         DeleteThread deleteThread = mock(DeleteThread.class);
         when(deleteThread.execute(memeId)).thenReturn(commentIds);
         ObjectMapper mapper = new ObjectMapper();
+        OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
 
-        new MemesEventsListener(deleteThread, new KafkaCommentEvents(kafka, mapper), mapper)
+        new MemesEventsListener(deleteThread, new KafkaCommentEvents(db.outbox(), mapper), mapper,
+                db.tx())
                 .receive("{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId
                         + "\",\"eventId\":\"" + UUID.randomUUID() + "\"}", null);
 

@@ -3,14 +3,11 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Component;
+import com.jrobertgardzinski.outbox.OutboxEvent;
+import com.jrobertgardzinski.outbox.spring.SpringOutbox;
+import org.slf4j.MDC;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * The second hop of the meme-deletion CASCADE, on {@code comments-events}: memes announced
@@ -18,34 +15,36 @@ import java.util.UUID;
  * microservice-user-collections can drop whatever it had saved of them. Nobody orchestrates this —
  * each service reacts to the hop before it and announces its own.
  *
- * <p><strong>Why no outbox here, when the saga has one.</strong> An outbox buys one thing: the
- * guarantee that an event whose transaction committed WILL eventually reach the broker. That
- * guarantee is worth its price (a table, a republisher, retention, a migration) exactly where a
- * lost event costs something a retry cannot fix. It does in the saga: a lost USER_CONTENT_PURGED
- * leaves the orchestrator waiting for a confirmation that will never come, so it retries, then
- * compensates, then announces PORTAL_PURGE_FAILED — a false failure on a GDPR obligation, over an
- * erasure that actually happened. There, delivery IS the contract.
+ * <p><strong>Why there IS an outbox here now, having argued there should not be.</strong> The old
+ * argument was about price, not about value, and it was honest at the time: an outbox bought the
+ * guarantee that a committed change's announcement eventually reaches the broker, and the price was
+ * a table, a republisher, a retention sweep, a migration and the tests for all four — written from
+ * scratch, in this service. Against the stake here (one stale collection entry pointing at a comment
+ * that no longer exists, which the UI's read-repair must survive anyway because the event is
+ * asynchronous) that price was not worth paying.
  *
- * <p>Here the whole stake is one stale row: a collection entry pointing at a comment that no longer
- * exists. Nothing waits for this event, nothing times out on it, nothing compensates. The UI's
- * read-repair (it must handle a dangling reference anyway — the event is asynchronous, so there is
- * always a window where the row is stale) drops what it cannot resolve. Buying durability machinery
- * to protect a dead row would be paying saga prices for cascade stakes; the choreography's premise
- * is precisely that the worst outcome of a failure is that dead row.
+ * <p>Round 10 changed the price, not the stake. The mechanism became a kernel library
+ * ({@code com.jrobertgardzinski:transactional-outbox} plus its Spring adapter), extracted from
+ * microservice-memes' implementation after three rounds of hardening, with its own tests. What this
+ * service now pays is one migration and one configuration class — and at THAT price, accepting a
+ * permanently lost event stops being a trade and starts being a leftover. It mattered that the loss
+ * was unrepairable: a redelivered MEME_DELETED finds an empty thread and deliberately announces
+ * nothing, so nothing in the system ever re-derives a lost COMMENTS_DELETED. The audit of 26.07
+ * named the deeper problem — four copies of the participant role, each with different guarantees —
+ * and one library with one guarantee is the answer to it.
  *
- * <p>What is NOT optional is the ordering: a rollback must never let an announcement out. That
- * costs nothing to get right — the transaction lives inside {@code DeleteThread}'s decorator, so a
- * rollback throws and {@link MemesEventsListener} never reaches the announcement. The send is
- * therefore always after a successful commit, and its failure is only ever logged.
+ * <p>What the guarantee is now, concretely: the announcement row is written in the SAME transaction
+ * as the thread delete (opened by {@link MemesEventsListener}, joined by {@code DeleteThread}'s
+ * decorator), so a rollback still lets nothing out — but a crash or a broker outage between that
+ * commit and the send no longer loses anything either, because the row stays unpublished and the
+ * library's republisher re-sends it and marks it only once the broker has confirmed.
  *
- * <p>Also note what the event does NOT carry: comment ids and a meme id, no authors — a topic
- * whose other traffic is PII-bearing (the saga's confirmations name the leaver) gains no new PII.
+ * <p>Unchanged from round 9, deliberately: the topic, the envelope (version 1 — fields are only ever
+ * added within a version, workspace ADR 0004), the partition key, and what the event does NOT carry.
+ * It names comment ids and a meme id, no authors — a topic whose other traffic is PII-bearing (the
+ * saga's confirmations name the leaver) gains no new PII.
  */
-@Component
-@ConditionalOnProperty(name = "comments.kafka-enabled", havingValue = "true")
 class KafkaCommentEvents implements CommentEvents {
-
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaCommentEvents.class);
 
     /**
      * Shared with the saga's confirmations on purpose — one topic per producing service, types
@@ -54,21 +53,39 @@ class KafkaCommentEvents implements CommentEvents {
      */
     static final String TOPIC = "comments-events";
 
-    private final KafkaTemplate<String, String> kafka;
+    static final String COMMENTS_DELETED = "COMMENTS_DELETED";
+
+    private final SpringOutbox outbox;
     private final ObjectMapper mapper;
 
-    KafkaCommentEvents(KafkaTemplate<String, String> kafka, ObjectMapper mapper) {
-        this.kafka = kafka;
+    KafkaCommentEvents(SpringOutbox outbox, ObjectMapper mapper) {
+        this.outbox = outbox;
         this.mapper = mapper;
     }
 
     @Override
     public void commentsDeleted(String memeId, List<String> commentIds) {
+        outbox.announce(announcementOf(memeId, commentIds));
+    }
+
+    /**
+     * The event as it will be stored AND as it will be sent — the row is the record.
+     *
+     * <p>The envelope id is minted by the library BEFORE the payload and pasted INTO it. Round 9's
+     * comment on that field said "random, not derived: there is no republication path to deduplicate
+     * against"; there is one now, which is exactly why the id may no longer be an incidental
+     * {@code UUID.randomUUID()} invented while serialising. A confirmed send whose {@code published}
+     * mark did not land IS re-sent, so a consumer has to be able to tell the duplicate from a second
+     * deletion — and it can only do that if the row's key and the payload's {@code id} are the same
+     * string, for the first attempt and for every redelivery of that row. The library keeps the
+     * payload opaque (never parsed, never re-serialised, so a redelivery is byte-identical by
+     * construction), which is precisely why it cannot paste the id in itself.
+     */
+    OutboxEvent announcementOf(String memeId, List<String> commentIds) {
+        String eventId = OutboxEvent.newId();
         ObjectNode event = mapper.createObjectNode()
-                // random, not derived: there is no republication path to deduplicate against —
-                // a redelivered MEME_DELETED finds an empty thread and announces nothing at all
-                .put("id", UUID.randomUUID().toString())
-                .put("type", "COMMENTS_DELETED")
+                .put("id", eventId)
+                .put("type", COMMENTS_DELETED)
                 .put("memeId", memeId);
         ArrayNode ids = event.putArray("commentIds");
         commentIds.forEach(ids::add);
@@ -79,23 +96,22 @@ class KafkaCommentEvents implements CommentEvents {
         try {
             payload = mapper.writeValueAsString(event);
         } catch (Exception impossible) {
-            // ids and a meme id only — if THIS cannot be serialised, nothing in this service can
-            LOG.error("could not serialise the COMMENTS_DELETED announcement for meme {}", memeId,
-                    impossible);
-            return;
+            // Ids and a meme id only — if THIS cannot be serialised, nothing in this service can.
+            // It is a throw and no longer a logged return, and the change is deliberate: the
+            // announcement is now part of the thread delete's unit of work, so failing to build it
+            // must take that transaction down rather than commit a teardown nobody will hear about.
+            // The payload itself never reaches the log — whatever went wrong, the ids are not it.
+            throw new IllegalStateException("could not serialise the " + COMMENTS_DELETED
+                    + " announcement for a thread of " + commentIds.size() + " comment(s)", impossible);
         }
         // keyed by memeId, like MEME_DELETED itself: the whole cascade of one meme stays on one
         // partition, so a consumer never sees the comments' fate before the meme's
-        kafka.send(KafkaTracing.withCid(TOPIC, memeId, payload))
-                // fire-and-forget: the thread is already gone and no retry of ours can change
-                // that, so a failed send costs the stale rows described above — worth a loud line
-                // in the log, not a rollback and not an outbox
-                .whenComplete((sent, failure) -> {
-                    if (failure != null) {
-                        LOG.error("failed to announce COMMENTS_DELETED for meme {} ({} comment(s));"
-                                        + " collections may keep stale references until read-repair",
-                                memeId, commentIds.size(), failure);
-                    }
-                });
+        // the cid is read from the MDC HERE, at announce time — while the listener that started
+        // this cascade hop still has it — and stored in the row, because the send may happen again
+        // hours later on a scheduler thread with no trace context at all. That is the one thing
+        // KafkaTracing.withCid (still right for the saga's confirmations, which are never
+        // republished) cannot do, and the reason this class does not use it.
+        return new OutboxEvent(eventId, TOPIC, COMMENTS_DELETED, memeId,
+                MDC.get(CorrelationIdFilter.MDC_KEY), payload);
     }
 }

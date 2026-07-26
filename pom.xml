@@ -159,6 +159,21 @@
             <artifactId>offline-jwt</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
+        <!-- COMMENTS_DELETED durability (round 10): the framework-free outbox core plus its Spring
+             adapter, extracted from microservice-memes' hardened implementation. This service used
+             to argue that an outbox was too expensive for the cascade's stakes; owning one now
+             costs a migration and a config class, which is a different sum — see
+             V4__comment_events_outbox.sql. -->
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>transactional-outbox</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>infrastructure-spring-outbox</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
         <!-- consumer-driven contract: the pact test states which saga commands this service
              understands; the generated pact (pacts/, committed) is verified against the REAL
              producer code by microservice-security's provider tests -->

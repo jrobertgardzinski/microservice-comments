@@ -99,14 +99,30 @@ class CommentsConfig {
                               PlatformTransactionManager transactionManager) {
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
         // per-comment vote purges + the thread delete land together (the cascade stays idempotent).
-        // The dropped ids come back THROUGH the transaction: a caller holding them holds proof of
-        // a commit, which is what lets MemesEventsListener announce them without an outbox
+        //
+        // Since round 10 this template usually JOINS an outer one rather than opening its own:
+        // MemesEventsListener wraps the whole cascade hop — the thread delete AND the outbox row
+        // announcing it — in a single transaction, and Spring's default propagation makes this
+        // execute participate in it. That is deliberate, and it is what lets the announcement share
+        // the delete's fate in both directions: a rollback discards it, a commit makes it durable.
+        // The decorator stays because the use case must be atomic on its own too (nothing else
+        // guarantees a caller wraps it), and because "join if there is one, open one otherwise" is
+        // exactly what REQUIRED means
         return new DeleteThread(commentRepository, commentVotes) {
             @Override
             public List<String> execute(String memeId) {
                 return tx.execute(status -> super.execute(memeId));
             }
         };
+    }
+
+    @Bean
+    java.time.Clock clock() {
+        // the outbox's row timestamps and both of its age comparisons (see CommentsOutboxConfig).
+        // Declared unconditionally, though only the outbox takes it today: a bean graph whose SHAPE
+        // depends on whether a broker exists is one more difference between what is tested and what
+        // runs. Injectable, not Clock.systemUTC() inline, so a test can steer time.
+        return java.time.Clock.systemUTC();
     }
 
     @Bean

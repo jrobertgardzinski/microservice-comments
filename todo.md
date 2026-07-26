@@ -16,6 +16,20 @@ Tylko otwarte rzeczy. Historia = git log.
   tylko ten serwis wie, KTÓRE komentarze wisiały pod memem. Bez outboxa (stawka = martwy ref,
   naprawi read-repair w UI), ale publikacja tylko po udanym commicie: `DeleteThread` zwraca
   listę id, ogłasza dopiero `MemesEventsListener` spoza transakcji. Pusty wątek = brak zdarzenia.
+  **AWANS DO GWARANCJI OUTBOXA** (2026-07-26, paczka 10): argument „bez outboxa" był o CENIE, a
+  cena spadła — mechanizm to teraz biblioteka jądra `com.jrobertgardzinski:transactional-outbox`
+  (+ `infrastructure-spring-outbox`), wyciągnięta z utwardzonej implementacji memes, więc koszt
+  posiadania to migracja `V4__comment_events_outbox.sql` i jedna klasa konfiguracji. Przeważyło to,
+  że strata była NIENAPRAWIALNA: redostarczony `MEME_DELETED` trafia na pusty wątek i celowo nic
+  nie ogłasza, więc zgubionego `COMMENTS_DELETED` nic nigdy nie odtworzy. Teraz kasowanie wątku i
+  wiersz outboxa to JEDNA transakcja (otwiera ją `MemesEventsListener`, dekorator `DeleteThread`
+  do niej dołącza), pierwsza próba zaparkowana na commicie i nieblokująca, marka `published`
+  dopiero po potwierdzeniu brokera, republisher dosyła bajt-w-bajt to samo zdarzenie. Envelope v1,
+  klucz `memeId`, pusty wątek = brak zdarzenia — BEZ ZMIAN. `id` koperty to teraz klucz wiersza
+  (`OutboxEvent.newId()`), bo ścieżka republikacji ISTNIEJE i duplikat musi być rozpoznawalny.
+  DOMKNIĘTE PRZY OKAZJI: zegary producenta, których ten serwis NIE MIAŁ —
+  `max.block.ms=5000`/`delivery.timeout.ms=30000`/`request.timeout.ms=15000` + pin
+  `KafkaProducerClocksTest`. Suita 81 → 91.
 
 ## Zrobione (cd.)
 - **Offline JWT gate** — ZROBIONE (2026-07-06, `7609b7c`+`bc408b8`): `JwtSecurityAuthenticationGate`

@@ -8,8 +8,14 @@ import java.util.List;
  * one says nothing ({@link NoopCommentEvents}, for tests and broker-less dev runs).
  *
  * <p>Deliberately an infrastructure interface, not an application port: no use case calls it. The
- * announcement is a consequence of a committed delete, and the only place that knows the delete
- * committed is outside the transaction — the listener that started the cascade.
+ * announcement is a consequence of the CASCADE, not of dropping a thread — the use case knows
+ * nothing of brokers, and the only place that knows an announcement is even called for is the
+ * listener that started the hop.
+ *
+ * <p>Since round 10 the implementation writes an outbox row, so the call belongs INSIDE the hop's
+ * transaction rather than after it: the announcement shares the fate of the delete in both
+ * directions. See {@link MemesEventsListener} for the unit of work and {@link KafkaCommentEvents}
+ * for why the durability is worth having now.
  */
 interface CommentEvents {
 

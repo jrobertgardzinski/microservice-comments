@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -19,11 +20,27 @@ import java.util.List;
  * consistent, idempotent.
  *
  * <p>And then it passes the baton on. This class is the seam where the cascade's second hop is
- * decided, because it is the only place that sees BOTH the dropped ids and the fact that the
- * transaction succeeded: {@code deleteThread.execute} returns through its transactional decorator,
- * so a return means "committed" and a rollback means an exception thrown before the announcement
- * line is ever reached. That is the whole "publish after commit" mechanism here — no outbox, no
- * transaction synchronization; {@link KafkaCommentEvents} argues why that is enough at these stakes.
+ * decided, because it is the only place that sees BOTH the dropped ids and the whole hop as one
+ * unit of work.
+ *
+ * <p><strong>Round 10 made that unit of work explicit, and that is the point of the change.</strong>
+ * Before, the announcement happened AFTER the (decorated) use case returned — outside any
+ * transaction — and "publish after commit" was simply the fact that a return meant a commit. That is
+ * enough to keep a rollback silent, but it leaves the announcement homeless: the process could die in
+ * the gap between the commit and the send, and the event was then gone for good, because a
+ * redelivered MEME_DELETED finds an empty thread and deliberately announces nothing.
+ *
+ * <p>So the hop now opens ONE transaction around both steps. {@code DeleteThread}'s own decorator
+ * joins it (Spring's default propagation), and {@link KafkaCommentEvents} writes its outbox row into
+ * it — which buys the property the old arrangement could not have: a rollback takes the announcement
+ * with it AND a commit makes the announcement durable, whatever happens to the send afterwards. The
+ * publication attempt itself is parked on the commit by the outbox library, so it still never runs
+ * before the change it announces is real.
+ *
+ * <p>The transaction is opened HERE rather than inside the use case's decorator for the reason the
+ * announcement always lived here: only this class knows whether an announcement is called for at all
+ * — an empty thread is announced to nobody — and the announcement is a consequence of the cascade,
+ * not of the use case, which knows nothing of brokers.
  */
 @Component
 @ConditionalOnProperty(name = "comments.kafka-enabled", havingValue = "true")
@@ -34,11 +51,14 @@ class MemesEventsListener {
     private final DeleteThread deleteThread;
     private final CommentEvents commentEvents;
     private final ObjectMapper mapper;
+    private final TransactionTemplate tx;
 
-    MemesEventsListener(DeleteThread deleteThread, CommentEvents commentEvents, ObjectMapper mapper) {
+    MemesEventsListener(DeleteThread deleteThread, CommentEvents commentEvents, ObjectMapper mapper,
+                        TransactionTemplate tx) {
         this.deleteThread = deleteThread;
         this.commentEvents = commentEvents;
         this.mapper = mapper;
+        this.tx = tx;
     }
 
     @KafkaListener(topics = "memes-events", groupId = "comments")
@@ -67,16 +87,30 @@ class MemesEventsListener {
         }
         if ("MEME_DELETED".equals(event.path("type").asText())) {
             String memeId = event.path("memeId").asText();
-            List<String> dropped = deleteThread.execute(memeId);
+            List<String> dropped = dropTheThreadAndAnnounceIt(memeId);
             LOG.info("dropped the comment thread of deleted meme {} ({} comment(s))",
                     memeId, dropped.size());
+        }
+    }
+
+    /**
+     * The hop as ONE transaction: drop the thread and, in the same unit of work, write the
+     * announcement the next service needs. Either both land or neither does.
+     *
+     * <p>A failure anywhere inside propagates out of {@code receive}, which is what makes Kafka
+     * redeliver the MEME_DELETED so the whole (idempotent) hop runs again.
+     */
+    private List<String> dropTheThreadAndAnnounceIt(String memeId) {
+        return tx.execute(status -> {
+            List<String> dropped = deleteThread.execute(memeId);
             if (dropped.isEmpty()) {
                 // a meme nobody commented on, or a redelivered MEME_DELETED whose cascade already
                 // ran: an empty COMMENTS_DELETED states no fact a consumer could act on, and the
                 // idempotent cascade would re-emit it on every redelivery — noise on a shared topic
-                return;
+                return dropped;
             }
             commentEvents.commentsDeleted(memeId, dropped);
-        }
+            return dropped;
+        });
     }
 }

@@ -36,6 +36,11 @@ import static org.mockito.Mockito.when;
  * receiver: it applies the very same filter to what both producers here actually emit, and pins
  * the two properties the filter depends on — the cascade event's type is not the confirmation's,
  * and it carries neither a {@code sagaId} nor an {@code email} that could make it look like one.
+ *
+ * <p>Worth re-running deliberately after round 10: the cascade's half of this topic now travels
+ * through an outbox and can be RE-SENT, while the saga's confirmations still go straight out. The two
+ * conversations no longer even share a delivery path, and this test is what keeps the one that
+ * changed from disturbing the one that did not.
  */
 class CommentsEventsTopicTest {
 
@@ -51,10 +56,12 @@ class CommentsEventsTopicTest {
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
     private final DeleteThread deleteThread = mock(DeleteThread.class);
 
+    private final OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
+
     private final PurgeCommandsListener saga =
             new PurgeCommandsListener(purgeUserComments, kafka, mapper);
-    private final MemesEventsListener cascade =
-            new MemesEventsListener(deleteThread, new KafkaCommentEvents(kafka, mapper), mapper);
+    private final MemesEventsListener cascade = new MemesEventsListener(deleteThread,
+            new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());
 
     @BeforeEach
     void sendSucceeds() {
