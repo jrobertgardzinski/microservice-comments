@@ -80,12 +80,12 @@ final class OutboxTestDatabase {
 
     /** Whether the row of an event is still an outstanding obligation. */
     boolean isPending(String memeId) {
-        return "false".equals(scalar("SELECT published FROM " + CommentsOutboxConfig.TABLE
+        return "true".equals(scalar("SELECT published_at IS NULL FROM " + CommentsOutboxConfig.TABLE
                 + " WHERE event_key = '" + memeId + "'"));
     }
 
     boolean isPublished(String memeId) {
-        return "true".equals(scalar("SELECT published FROM " + CommentsOutboxConfig.TABLE
+        return "true".equals(scalar("SELECT published_at IS NOT NULL FROM " + CommentsOutboxConfig.TABLE
                 + " WHERE event_key = '" + memeId + "'"));
     }
 
@@ -104,7 +104,8 @@ final class OutboxTestDatabase {
      */
     void backdateBeyondMinAge(String memeId) {
         execute("UPDATE " + CommentsOutboxConfig.TABLE
-                + " SET created_at = DATEADD('SECOND', -60, created_at) WHERE event_key = '"
+                + " SET created_at = DATEADD('SECOND', -60, created_at),"
+                + " published_at = DATEADD('SECOND', -60, published_at) WHERE event_key = '"
                 + memeId + "'");
     }
 

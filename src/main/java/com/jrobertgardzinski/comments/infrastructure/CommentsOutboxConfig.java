@@ -74,11 +74,17 @@ class CommentsOutboxConfig {
      * singleton and ignore the argument).
      *
      * <p>{@link RepublisherSettings#defaults} on purpose, rather than numbers of this service's own:
-     * a 30s minimum age (comfortably above the 30s delivery timeout below, so a re-send never races
-     * an attempt still in flight), 5s confirmation patience — the same 5s as {@code max.block.ms},
+     * a 60s minimum age, 5s confirmation patience — the same 5s as {@code max.block.ms},
      * one "how long do we wait for a broker" number for the service — 500-row retention batches at
      * most 4 per pass, and 500 rows re-sent per pass. Sharing the defaults with microservice-memes
      * is the whole point of the shared library: two services, one answer.
+     *
+     * <p>The minimum age was 30s and this comment used to call that "comfortably above the 30s
+     * delivery timeout below". It was not above it at all — it was EQUAL to it, and the age clock
+     * starts at {@code created_at}, stamped inside the announcing transaction, before the first
+     * attempt can even begin. The real margin was therefore zero minus however long the transaction
+     * took, so a slow broker plus a long cascade made the republisher send a second copy while the
+     * first was still in the producer's accumulator. 60s is two delivery timeouts (P13-23).
      */
     static OutboxRepublisher republisher(SpringOutbox outbox, long retentionHours) {
         return new OutboxRepublisher(outbox.outbox(), outbox.publisher(),

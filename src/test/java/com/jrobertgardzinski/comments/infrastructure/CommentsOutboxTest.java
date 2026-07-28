@@ -185,7 +185,14 @@ class CommentsOutboxTest {
                 events.commentsDeleted(memeId, List.of(UUID.randomUUID().toString())));
 
         verify(kafka, times(1)).send(any(ProducerRecord.class));
-        assertTrue(published(memeId), "a confirmed delivery marks the row");
+        // The confirmation callback runs on the Kafka producer's I/O thread, and the mark is JDBC —
+        // a connection pool with nothing free blocks there for Hikari's default thirty seconds and
+        // freezes every send this service makes. So the callback only records; the pass writes.
+        assertFalse(published(memeId), "the producer's I/O thread must not touch the database");
+
+        republisher.runOnce();
+
+        assertTrue(published(memeId), "a confirmed delivery marks the row — on the pass");
 
         backdateBeyondMinAge(memeId);   // even old enough to qualify, a published row is not re-sent
         republisher.runOnce();
@@ -316,7 +323,8 @@ class CommentsOutboxTest {
     }
 
     private boolean published(String memeId) {
-        return jdbc.sql("SELECT published FROM " + CommentsOutboxConfig.TABLE + " WHERE event_key = ?")
+        return jdbc.sql("SELECT published_at IS NOT NULL FROM " + CommentsOutboxConfig.TABLE
+                        + " WHERE event_key = ?")
                 .params(memeId).query(Boolean.class).single();
     }
 
@@ -329,8 +337,11 @@ class CommentsOutboxTest {
     }
 
     private void backdateBeyondRetention(String memeId) {
+        // published_at moves as well: retention measures its window from the DELIVERY now, so
+        // ageing only the creation leaves a delivered row permanently un-reapable
         jdbc.sql("UPDATE " + CommentsOutboxConfig.TABLE + " SET created_at = DATEADD('HOUR', ?,"
-                        + " created_at) WHERE event_key = ?")
-                .params(-(RETENTION_HOURS + 1), memeId).update();
+                        + " created_at), published_at = DATEADD('HOUR', ?, published_at)"
+                        + " WHERE event_key = ?")
+                .params(-(RETENTION_HOURS + 1), -(RETENTION_HOURS + 1), memeId).update();
     }
 }
