@@ -189,6 +189,36 @@ public class CommentThreadSteps {
         assertEquals(expected, lastPage.jsonPath().getList("id").size());
     }
 
+    private java.util.List<String> idsAcrossPages;
+
+    @When("she reads every page of size {int} of the thread")
+    public void readsEveryPage(int size) {
+        idsAcrossPages = new java.util.ArrayList<>();
+        for (int page = 0; ; page++) {
+            java.util.List<String> ids = RestAssured.given().port(port)
+                    .queryParam("page", page).queryParam("size", size)
+                    .get("/memes/{memeId}/comments", TestAuthConfig.EXISTING_MEME)
+                    .jsonPath().getList("id");
+            if (ids.isEmpty()) {
+                return;
+            }
+            idsAcrossPages.addAll(ids);
+        }
+    }
+
+    @Then("the pages together show each of the {int} comments exactly once")
+    public void pagesAreDisjointAndComplete(int expected) {
+        // Counting rows per page proves only that the rows exist. What a reader actually needs is
+        // that paging never repeats a comment and never loses one — and that is a live risk here,
+        // not a hypothetical: each page is its own query, the ordering is created_at with no
+        // tie-break, and comments written in a loop share a millisecond, so SQL is free to order
+        // ties differently between two queries. This assertion is the guard for that fix.
+        assertEquals(expected, idsAcrossPages.size(),
+                "the pages together must show every comment: " + idsAcrossPages);
+        assertEquals(expected, new java.util.HashSet<>(idsAcrossPages).size(),
+                "and none of them twice: " + idsAcrossPages);
+    }
+
     @When("she posts a comment of {int} characters under the known meme")
     public void postsComment(int length) {
         lastResponse = comment(TestAuthConfig.VALID_TOKEN, TestAuthConfig.EXISTING_MEME,

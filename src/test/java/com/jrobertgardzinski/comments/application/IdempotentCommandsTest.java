@@ -23,8 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 /**
  * The teeth of workspace ADR 0006 for this service: every command is idempotent BY DEFAULT —
  * running it twice must leave exactly the state one run leaves. One generic test enforces the
- * law; the one command that CANNOT obey it (adding a comment — two calls are two comments,
- * by design) is a DECLARED EXCEPTION and carries its own proof below, as the ADR demands.
+ * law; a command that CANNOT obey it is a DECLARED EXCEPTION and carries its own proof below,
+ * as the ADR demands.
+ *
+ * <p>This class used to claim "every command … the ONE command that cannot obey it" while covering
+ * three of the service's six and naming one exception. Hiding was idempotent and simply unenforced;
+ * voting BREAKS the law by design — a second identical vote retracts it, which the feature file
+ * pins as its own scenario — and was neither enforced nor declared. A registry that quietly omits
+ * the interesting cases is worse than no registry, because it reads like proof.
  */
 class IdempotentCommandsTest {
 
@@ -85,9 +91,28 @@ class IdempotentCommandsTest {
             votes.put("c3", new HashMap<>(Map.of("bob@example.com", VoteDirection.DOWN)));
         }
 
+        final Map<String, Boolean> hidden = new HashMap<>();
+
+        final com.jrobertgardzinski.comments.application.CommentModeration moderation =
+                new com.jrobertgardzinski.comments.application.CommentModeration() {
+                    public void setHidden(String commentId, boolean isHidden) {
+                        hidden.put(commentId, isHidden);
+                    }
+
+                    public boolean isHidden(String commentId) {
+                        return hidden.getOrDefault(commentId, false);
+                    }
+
+                    public java.util.Set<String> hiddenIn(String memeId) {
+                        return hidden.entrySet().stream().filter(Map.Entry::getValue)
+                                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet());
+                    }
+                };
+
         Map<String, Object> fingerprint() {
             Map<String, Object> f = new LinkedHashMap<>();
             f.put("comments", List.copyOf(comments));
+            f.put("hidden", Map.copyOf(hidden));
             f.put("votes", votes.entrySet().stream().collect(
                     LinkedHashMap::new, (m, e) -> m.put(e.getKey(), Map.copyOf(e.getValue())),
                     Map::putAll));
@@ -107,6 +132,10 @@ class IdempotentCommandsTest {
                         .execute("ghost", "alice@example.com", false));
         c.put("delete a whole thread",
                 w -> new DeleteThread(w.repository, w.commentVotes).execute("m1"));
+        // hiding was idempotent all along and simply was not enforced — three of six commands were
+        // in this map, which is not "every command" however the javadoc read
+        c.put("hide a comment (moderator)",
+                w -> new HideComment(w.repository, w.moderation).execute("c1", true, true));
         c.put("purge a leaver's comments (default rule)",
                 w -> new PurgeUserComments(w.repository, w.commentVotes,
                         new PurgeRule.AnonymizeAuthor())
@@ -126,6 +155,26 @@ class IdempotentCommandsTest {
                     assertEquals(once.fingerprint(), twice.fingerprint(),
                             "ADR 0006: a command run twice must leave the state of one run");
                 }));
+    }
+
+    @Test
+    @DisplayName("DECLARED EXCEPTION: voting twice retracts the vote — a toggle, by design")
+    void voting_twice_is_the_second_declared_exception() {
+        // The product decision this encodes: clicking an up-vote again means "actually, no". So the
+        // second run does NOT leave the state of the first, and that is correct rather than a bug —
+        // which is exactly what a declared exception is for. Left undeclared, the next person to
+        // read the law above would have taken this command for an oversight and "fixed" it.
+        World once = new World();
+        new VoteOnComment(once.repository, once.commentVotes)
+                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+        World twice = new World();
+        new VoteOnComment(twice.repository, twice.commentVotes)
+                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+        new VoteOnComment(twice.repository, twice.commentVotes)
+                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+
+        assertNotEquals(once.fingerprint(), twice.fingerprint(),
+                "the same vote cast twice is a retraction — the exception the ADR must name");
     }
 
     @Test

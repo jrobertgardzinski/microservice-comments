@@ -34,6 +34,12 @@ Feature: Comment threads under memes
     Then 2 comments are returned
     When she reads page 2 of size 2 of the thread
     Then 1 comment is returned
+    # Counting alone proved only that five rows exist. It could not tell a correct paging from one
+    # that shows the same comment on two pages and never shows another — which is a live risk here,
+    # because the query orders by created_at with no tie-break and comments written in a loop share
+    # a millisecond. Reading every page and comparing the IDS is what makes this a guard.
+    When she reads every page of size 2 of the thread
+    Then the pages together show each of the 5 comments exactly once
 
   Scenario: an essay is refused; a remark is accepted
     Given a signed-in user
