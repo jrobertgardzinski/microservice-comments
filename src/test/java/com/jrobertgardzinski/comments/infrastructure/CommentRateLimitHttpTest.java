@@ -29,10 +29,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * sign-in filter, the controller, the JSON — while staying a unit of THIS service, with no port,
  * no waiting and nothing to be flaky about.
  */
-@SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class},
+@SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class}, properties = {
         // the property rather than a @Primary bean, so the refusal travels the real wiring, dial
         // included, and this test would notice if that wiring were ever bypassed
-        properties = "comments.rate-limit.per-minute=1")
+        "comments.rate-limit.per-minute=1",
+        // ITS OWN database. The shared test URL carries DB_CLOSE_DELAY=-1, so the in-memory schema
+        // outlives any single context and every @SpringBootTest in this module reads the same rows.
+        // The comments written below therefore landed at the head of the known meme's thread and
+        // broke a neighbouring test that asserts on $[0] — which CI caught and a local run did not,
+        // because the order happened to differ. A test that must write should write somewhere of
+        // its own rather than ask the rest of the suite to tolerate it.
+        "spring.datasource.url=jdbc:h2:mem:comments-rate-limit;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"})
 @AutoConfigureMockMvc
 class CommentRateLimitHttpTest {
 
