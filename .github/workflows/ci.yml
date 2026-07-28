@@ -26,6 +26,14 @@ jobs:
         with:
           repository: jrobertgardzinski/offline-jwt
           path: offline-jwt
+      - uses: actions/checkout@v4
+        with:
+          repository: jrobertgardzinski/transactional-outbox
+          path: transactional-outbox
+      - uses: actions/checkout@v4
+        with:
+          repository: jrobertgardzinski/infrastructure-spring-outbox
+          path: infrastructure-spring-outbox
       # consumer of this service's confirmations — checkout only (its pacts/), no build
       - uses: actions/checkout@v4
         with:
@@ -41,5 +49,7 @@ jobs:
         run: |
           mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests
       - name: Build and test (including pact provider verification)
         run: mvn -B --no-transfer-progress -f microservice-comments/pom.xml clean verify
