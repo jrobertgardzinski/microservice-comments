@@ -18,33 +18,19 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.5.16</spring-boot.version>
+        <spring-boot.version>4.1.0</spring-boot.version>
+        <!-- Spring Boot 4's BOM no longer manages these two; pinned here so the build
+             stays reproducible rather than resolving whatever is newest. -->
+        <rest-assured.version>6.0.1</rest-assured.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <allure.version>2.35.4</allure.version>
         <cucumber.version>7.34.6</cucumber.version>
-        <!--
-          Ahead of the one Spring Boot 3.5.16 manages (5.12.2), and deliberately so: cucumber 7.34 is
-          compiled against JUnit Platform 1.14 and calls into it during engine discovery. Left to
-          Boot's BOM the platform stays at 1.12 and the run dies before a single scenario starts,
-          with only "TestEngine with ID 'cucumber' failed to discover tests" to show for it. Raising
-          JUnit is the smaller move than holding cucumber back, because Boot tolerates a newer JUnit
-          while cucumber cannot work with an older platform.
-        -->
-        <junit.version>5.14.2</junit.version>
         <compiler-plugin.version>3.15.0</compiler-plugin.version>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!-- FIRST on purpose: Maven takes the earliest matching entry, so this has to precede
-                 the Boot BOM to win the junit-platform-* versions from it. -->
-            <dependency>
-                <groupId>org.junit</groupId>
-                <artifactId>junit-bom</artifactId>
-                <version>${junit.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -72,6 +58,22 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!--
+          Explicit since Spring Boot 4, and JACKSON 2 on purpose. Boot 4 stopped bundling a JSON
+          mapper with the web starter, so the choice is now the application's to state; its own
+          default is Jackson 3 (tools.jackson.*), a different package root from the
+          com.fasterxml.jackson.* this service imports in 52 places. spring-boot-jackson2 is Boot 4's
+          supported module for exactly that situation and contributes the com.fasterxml ObjectMapper
+          bean the announcer and the saga listeners are wired to.
+
+          Deliberate and worth naming: moving to Jackson 3 is a SECOND migration - new package root,
+          new exception hierarchy, unchecked where 2 was checked - and doing it inside the Spring
+          Boot 4 change would leave neither one verifiable on its own. Filed, not forgotten.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
+        </dependency>
         <!-- observability: /actuator/prometheus for the workspace's Prometheus+Grafana -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -85,6 +87,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!--
+          The starters carry Spring Boot 4's per-technology AUTO-CONFIGURATION, which used to live in
+          one spring-boot-autoconfigure jar and be switched on by the mere presence of the library.
+          Boot 4 split it up, so declaring flyway-core or spring-kafka alone leaves them
+          unconfigured - migrations never run and no KafkaTemplate bean is created, both of which
+          this service failed on before these two lines existed.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -100,6 +113,10 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
@@ -107,6 +124,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          Spring Boot 4 broke the old catch-all starter apart: spring-boot-starter-test no longer
+          carries the per-technology test support, so @AutoConfigureMockMvc and the MockMvc
+          auto-configuration it turns on now arrive through this starter instead. Without it the
+          annotation simply is not on the classpath and the controller tests do not compile.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -121,15 +149,18 @@
             <!-- a real PostgreSQL 16 for the dialect bet: the MERGE upserts, the concurrent
                  first-vote unique violation and the V3 foreign key are proven against the very
                  database the stack runs, not only H2's PostgreSQL mode; skipped where docker is
-                 absent (the same pattern as memes' MinIO test). Version pinned by the Spring
-                 Boot BOM, like every other managed dependency here. -->
+                 absent (the same pattern as memes' MinIO test). Version pinned HERE since Spring
+                 Boot 4's BOM stopped managing testcontainers - it used to be managed like every
+                 other dependency in this file, and silently would not be any more. -->
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -163,6 +194,7 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
+            <version>${rest-assured.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
