@@ -76,17 +76,27 @@ jobs:
       # entirely green builds. Neither is exotic; both are one careless line away here too.
       #
       # No infrastructure needed: H2 is at runtime scope precisely so the packaged jar can come up
-      # without a database (see the pom's comment on it). What is under test is the ARTIFACT — that
-      # it assembles, wires and answers — not its behaviour, which the suite above owns.
+      # without a database (see the pom's comment on it), and the broker address points at nothing.
+      # What is under test is the ARTIFACT — that it assembles, wires and answers — not its
+      # behaviour, which the suite above owns.
+      #
+      # KAFKA IS ON, with a dead bootstrap address. The first version of this step ran with
+      # kafka-enabled=false, which meant the listeners, the outbox, the error handler and the
+      # confirmation channel — every bean this service only has BECAUSE it takes part in the saga —
+      # were never constructed, so a runtime dependency reaching the jar only down the Kafka path
+      # could vanish and this gate would still pass. That is the same hole security's gate had and
+      # closed the same afternoon: a gate that covers one member of a family is not a gate for the
+      # family. ListenerHeartbeatTest already proves the full wiring comes up without a broker.
       #
       # 500 is the failure being watched for: it means the endpoint itself is broken. 200 and 503
-      # are verdicts, and both are acceptable answers from a service with no broker.
+      # are verdicts, and both are acceptable answers from a service whose broker is not there.
       - name: Prove the packaged service boots and answers its probes
         run: |
           cd microservice-comments
           SPRING_DATASOURCE_URL='jdbc:h2:mem:bootsmoke;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE' \
             SPRING_DATASOURCE_USERNAME=sa SPRING_DATASOURCE_PASSWORD= \
-            COMMENTS_KAFKA_ENABLED=false SERVER_PORT=18085 MANAGEMENT_SERVER_PORT=19085 \
+            COMMENTS_KAFKA_ENABLED=true SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:1 \
+            SERVER_PORT=18085 MANAGEMENT_SERVER_PORT=19085 \
             java -jar target/microservice-comments-1.0.0-SNAPSHOT.jar > /tmp/boot-smoke.log 2>&1 &
           pid=$!
           for attempt in $(seq 1 60); do

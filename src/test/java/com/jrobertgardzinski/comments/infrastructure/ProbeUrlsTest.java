@@ -79,6 +79,18 @@ class ProbeUrlsTest {
                         + " every answer into a bare {\"status\":\"DOWN\"}, so that diagnosis exists"
                         + " in no environment where the lamp runs. The details are PII-free by"
                         + " construction, which is what makes always safe here.");
+
+        // The port belongs HERE, unconditionally — not with the manifest comparison below.
+        // It sat behind that test's assumeTrue until P16 poz. 8, which meant this repo's own CI
+        // pinned nothing about it: the manifest is not cloned there, so the assumption skipped both
+        // halves, and the boot smoke hands itself MANAGEMENT_SERVER_PORT through an env var, so it
+        // passes whatever the file says. Delete this line from the shipped properties and the
+        // actuator silently returns to the request port — which the ingress publishes, taking
+        // show-details=always with it — while every check in this repository stays green.
+        org.junit.jupiter.api.Assertions.assertNotNull(
+                deployed.getProperty("management.server.port"),
+                "the actuator is expected on a connector of its own; without this property it"
+                        + " shares the request port and rides the ingress with it");
     }
 
     /**
@@ -104,10 +116,9 @@ class ProbeUrlsTest {
         try (java.io.InputStream file = java.nio.file.Files.newInputStream(DEPLOYED_PROPERTIES)) {
             deployed.load(file);
         }
+        // that the property EXISTS is pinned unconditionally above; what needs the manifest — and
+        // may therefore legitimately skip — is only the comparison of the two numbers
         String configured = deployed.getProperty("management.server.port");
-        org.junit.jupiter.api.Assertions.assertNotNull(configured,
-                "the actuator is expected on its own connector; without this property it shares"
-                        + " the request port and rides the ingress with it");
 
         org.junit.jupiter.api.Assertions.assertEquals(configured, managementContainerPort(manifest),
                 "the container port named 'management' in " + manifest + " must be the port the"
