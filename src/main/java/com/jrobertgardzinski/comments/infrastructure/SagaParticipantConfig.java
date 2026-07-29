@@ -3,6 +3,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.outbox.spring.SpringOutbox;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
@@ -14,10 +15,13 @@ import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.ContainerCustomizer;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.listener.CommonErrorHandler;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.ConsumerRecordRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.RecordInterceptor;
 import org.springframework.kafka.listener.RetryListener;
 
 import java.nio.charset.StandardCharsets;
@@ -200,6 +204,53 @@ class SagaParticipantConfig {
             @Value("${comments.kafka-enabled:false}") boolean kafkaEnabled) {
         return new SagaListenersHealth(registry.getIfAvailable(), flooredStall(stallSeconds),
                 kafkaEnabled);
+    }
+
+    /**
+     * The heartbeat the idle events cannot give: every record delivered to a listener stamps the
+     * lamp's marker with its container's id.
+     *
+     * <p>Without this the lamp only ever hears from a loop that polled and got NOTHING —
+     * {@code ListenerContainerIdleEvent} is published per empty poll, and the no-longer-idle event
+     * only on the transition. A container consuming steadily is silent, so after
+     * {@code listener-stall-seconds} the lamp declared a working loop dead. That is not a corner
+     * case: draining a backlog after a broker outage runs for minutes without one empty poll, and at
+     * {@code replicas: 1} readiness would drop the only pod out of the Service while it catches up.
+     *
+     * <p>Installed as a {@link ContainerCustomizer} rather than as a bare {@code RecordInterceptor}
+     * bean because the interceptor has to know WHICH container it is speaking for, and only the
+     * customizer is handed the container. The parent passes its interceptor down to the concurrent
+     * children it starts, and stamping the parent's registered id is exactly what
+     * {@code SagaListenersHealth.markerFor} looks up.
+     *
+     * <p>Both ends of a record are stamped. {@code intercept} says the poll returned it;
+     * {@code afterRecord} says the handling finished — including the failure path, because a record
+     * riding out its retry budget is a loop that is turning, and the budget is where the 150s
+     * tolerance came from in the first place.
+     */
+    @Bean
+    ContainerCustomizer<Object, Object, ConcurrentMessageListenerContainer<Object, Object>>
+            listenerHeartbeat(SagaListenersHealth lamp) {
+        return container -> {
+            String id = container.getListenerId();
+            if (id == null) {
+                return;   // an anonymous container has no marker to advance
+            }
+            container.setRecordInterceptor(new RecordInterceptor<>() {
+                @Override
+                public ConsumerRecord<Object, Object> intercept(ConsumerRecord<Object, Object> record,
+                                                                Consumer<Object, Object> consumer) {
+                    lamp.recordDelivered(id);
+                    return record;
+                }
+
+                @Override
+                public void afterRecord(ConsumerRecord<Object, Object> record,
+                                        Consumer<Object, Object> consumer) {
+                    lamp.recordDelivered(id);
+                }
+            });
+        };
     }
 
     /**

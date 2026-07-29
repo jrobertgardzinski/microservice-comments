@@ -42,6 +42,62 @@ class CorsOriginsTest {
     /** Any mapping under /memes/** — the preflight is judged on the path, not the resource. */
     private static final String THREAD = "/memes/any-meme/comments";
 
+    /** The list {@link WhenDeployed} boots with — a superset of what any one deployment sets. */
+    static final String DEPLOYED_LIST = GALLERY + "," + INGRESS;
+
+    /** Relative to the repo directory, which is what surefire makes the working directory. */
+    private static final java.nio.file.Path MANIFEST = java.nio.file.Path.of("../k8s/base/comments.yaml");
+
+    /**
+     * Half one: the manifest is READ, rather than quoted from memory.
+     *
+     * <p>{@link WhenDeployed} used to introduce its property list as "exactly what
+     * k8s/base/comments.yaml sets" — while the manifest set a single origin and the test drove two.
+     * Harmless as it stood, and that is the trouble with it: the sentence claimed a guard nobody
+     * had written, so the drift it was there to catch could grow without anything going red. The
+     * failure it is FOR is not a value drifting, it is {@code UI_ORIGIN} disappearing — the obvious
+     * casualty of moving this container's env into a ConfigMap — and the result is the traceless
+     * one this whole class exists for: the browser refuses, no request reaches the service, no log
+     * line is written, the pod stays Ready, and the page shows no comments.
+     */
+    @Test
+    @DisplayName("every origin the k8s manifest sets is an origin the deployed-list case proves works")
+    void the_manifest_sets_origins_this_test_actually_exercises() throws java.io.IOException {
+        java.util.List<String> manifestOrigins = uiOriginFrom(java.nio.file.Files.readAllLines(MANIFEST));
+
+        org.junit.jupiter.api.Assertions.assertFalse(manifestOrigins.isEmpty(),
+                MANIFEST + " sets no UI_ORIGIN. In a cluster the gallery is served from the ingress,"
+                        + " so the default (compose's " + GALLERY + ") refuses every thread request"
+                        + " — in the browser, where this service can neither see it nor log it.");
+
+        java.util.List<String> proven = java.util.List.of(DEPLOYED_LIST.split(","));
+        org.junit.jupiter.api.Assertions.assertTrue(proven.containsAll(manifestOrigins),
+                "the manifest sets " + manifestOrigins + ", and only " + proven + " is exercised"
+                        + " below. An origin nothing drives a preflight for is an origin nobody has"
+                        + " checked this service will answer to.");
+    }
+
+    /** The {@code value:} of the {@code UI_ORIGIN} env entry, split on commas. */
+    private static java.util.List<String> uiOriginFrom(java.util.List<String> manifest) {
+        for (int line = 0; line < manifest.size(); line++) {
+            if (!manifest.get(line).trim().equals("- name: UI_ORIGIN")) {
+                continue;
+            }
+            for (int next = line + 1; next < manifest.size(); next++) {
+                String candidate = manifest.get(next).trim();
+                if (candidate.startsWith("value:")) {
+                    return java.util.Arrays.stream(candidate.substring("value:".length()).trim()
+                                    .replaceAll("^[\"']|[\"']$", "").split(","))
+                            .map(String::trim).filter(origin -> !origin.isEmpty()).toList();
+                }
+                if (candidate.startsWith("- name:")) {
+                    break;   // the entry has no literal value (a secretKeyRef, a configMapKeyRef)
+                }
+            }
+        }
+        return java.util.List.of();
+    }
+
     @Nested
     @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
     @AutoConfigureMockMvc
@@ -73,8 +129,9 @@ class CorsOriginsTest {
 
     @Nested
     @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class},
-            // exactly what k8s/base/comments.yaml sets
-            properties = "comments.ui-origin=http://localhost:8083,http://memes.portal.localhost:9080")
+            // a superset of what any one deployment sets; the test above is what ties this list to
+            // k8s/base/comments.yaml, by reading the manifest rather than describing it
+            properties = "comments.ui-origin=" + DEPLOYED_LIST)
     @AutoConfigureMockMvc
     @DisplayName("with a deployment's list")
     class WhenDeployed {

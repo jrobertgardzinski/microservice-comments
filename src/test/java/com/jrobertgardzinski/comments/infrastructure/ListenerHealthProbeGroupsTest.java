@@ -34,13 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * these two lines the wrong way round is a one-word mistake with a self-inflicted outage attached, and
  * this test is what fails instead.
  */
-@SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class},
-        // the same three lines the shipped file carries (half 1 is what pins THAT); passing them here
-        // is how half 2 gets a context to ask, since the test classpath shadows the real file
-        properties = {
-                "management.endpoint.health.probes.enabled=true",
-                "management.endpoint.health.group.readiness.include=readinessState,kafkaListeners",
-                "management.endpoint.health.group.liveness.include=livenessState"})
+// The three lines half 2 needs a context for now come from the test classpath's copy of the
+// management block, not from inline properties here — one copy for the whole suite, in the file that
+// shadows the shipped one. Half 1 below is what pins the shipped file itself.
+@SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 class ListenerHealthProbeGroupsTest {
 
     /** The contributor name is the bean name in {@link SagaParticipantConfig}. */

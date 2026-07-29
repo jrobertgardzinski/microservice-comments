@@ -1,16 +1,28 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.health.contributor.Status;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.config.ContainerCustomizer;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.RecordInterceptor;
 
 import java.time.Duration;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * The one thing the lamp's unit test cannot check: that the running loop's heartbeat actually REACHES
@@ -44,6 +56,12 @@ class ListenerHeartbeatTest {
     @Autowired
     SagaListenersHealth lamp;
 
+    @Autowired
+    KafkaListenerEndpointRegistry registry;
+
+    @Autowired
+    ContainerCustomizer<Object, Object, ConcurrentMessageListenerContainer<Object, Object>> heartbeat;
+
     @Test
     @DisplayName("the polling loop's heartbeat reaches the lamp — the registered id and the reporting one are not the same string")
     void the_loop_reports_its_polls_to_the_lamp() throws Exception {
@@ -58,5 +76,52 @@ class ListenerHeartbeatTest {
         assertEquals(Status.UP, lamp.health().getStatus());
         assertTrue(String.valueOf(lamp.health().getDetails().get(LISTENER)).contains("polling"),
                 "and the detail reports a real poll, not the grace: " + lamp.health().getDetails());
+    }
+
+    /**
+     * The same question for the OTHER half of the heartbeat, and it has to be asked separately: idle
+     * events say the loop polled and got nothing, records say it polled and got something, and a
+     * loop that is busy publishes only the second kind. If the interceptor is not on the container,
+     * {@code recordDelivered} is a method nobody calls — which is how the lamp came to report a
+     * draining backlog as a dead listener.
+     */
+    @Test
+    @DisplayName("every registered container carries the record heartbeat")
+    void the_containers_carry_the_record_heartbeat() {
+        assertFalse(registry.getListenerContainers().isEmpty(), "no containers to check");
+        registry.getListenerContainers().forEach(container -> assertNotNull(
+                ((ConcurrentMessageListenerContainer<?, ?>) container).getRecordInterceptor(),
+                container.getListenerId() + " has no record interceptor, so a loop that is busy"
+                        + " reports nothing at all and the lamp runs on empty polls alone"));
+    }
+
+    /**
+     * And that the interceptor stamps the marker under the CONTAINER'S OWN id. The lamp looks a
+     * marker up by the registered id (or a {@code -0} child of it); an interceptor that stamped some
+     * other string would be installed, invoked, and still leave the lamp on its boot grace — the
+     * exact shape of the child-id bug this file was written for, one layer down.
+     */
+    @Test
+    @DisplayName("and that interceptor stamps the marker under the container's own id")
+    @SuppressWarnings("unchecked")
+    void the_record_heartbeat_names_its_container() {
+        String unknownToAnyRealContainer = "a-container-of-its-own";
+        assertFalse(lamp.hasHeartbeatFrom(unknownToAnyRealContainer), "precondition");
+
+        ConcurrentMessageListenerContainer<Object, Object> container =
+                mock(ConcurrentMessageListenerContainer.class);
+        when(container.getListenerId()).thenReturn(unknownToAnyRealContainer);
+        ArgumentCaptor<RecordInterceptor<Object, Object>> installed =
+                ArgumentCaptor.forClass(RecordInterceptor.class);
+
+        // the customizer is a bean, so this drives the very object Spring hands the factory, and it
+        // stamps the very lamp the application serves health from
+        heartbeat.configure(container);
+        verify(container).setRecordInterceptor(installed.capture());
+        installed.getValue().intercept(new ConsumerRecord<>("content-commands", 0, 0L, "k", "v"),
+                mock(Consumer.class));
+
+        assertTrue(lamp.hasHeartbeatFrom(unknownToAnyRealContainer),
+                "a delivered record must advance the marker of the container that delivered it");
     }
 }

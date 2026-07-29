@@ -49,13 +49,27 @@ import java.util.function.LongSupplier;
  * that has nothing to do with reading or writing comments. This lamp answers one question only: "is MY
  * listener loop still turning?"
  *
- * <p><strong>How the loop reports that it turned.</strong> Not by counting records — the
- * {@code content-commands} topic is silent for days at a time, and an idle consumer must not read as
- * a dead one. The container publishes a {@link ListenerContainerIdleEvent} once per
- * {@code spring.kafka.listener.idle-event-interval} whenever a poll comes back empty, and a
- * {@link ListenerContainerNoLongerIdleEvent} when records start flowing again; both are stamped
- * here. So the marker advances while the loop polls, whether or not there is anything to consume,
- * and stops advancing the moment the loop does.
+ * <p><strong>How the loop reports that it turned.</strong> From BOTH ends of the poll, because
+ * either one alone lies about half the time:
+ * <ul>
+ *   <li>an empty poll publishes a {@link ListenerContainerIdleEvent} once per
+ *       {@code spring.kafka.listener.idle-event-interval}, and records starting again publish a
+ *       {@link ListenerContainerNoLongerIdleEvent}. This is what keeps a silent topic — and
+ *       {@code content-commands} is silent for days at a time — from reading as a dead one;</li>
+ *   <li>every record handed to a listener stamps the marker too, via the interceptor
+ *       {@code SagaParticipantConfig} installs on the containers ({@link #recordDelivered}).</li>
+ * </ul>
+ *
+ * <p>The second half was missing until 2026-07-29, and its absence inverted the lamp exactly when
+ * the answer mattered. Idle events fire only on EMPTY polls; the no-longer-idle event fires only on
+ * the idle→busy TRANSITION. A loop consuming without pause therefore publishes nothing at all, so
+ * the marker stood still and the lamp went DOWN after the tolerance — while the loop was working.
+ * The tolerance is 150s, derived from the retry budget of ONE record; draining a backlog after a
+ * broker outage (the duplicate storm this service's own manifests plan for with
+ * {@code strategy: Recreate}) exceeds it easily. At {@code replicas: 1} readiness then takes the
+ * only pod out of the Service precisely while the system is healing, and it teaches the operator
+ * that a red lamp means nothing. A lamp that is wrong when the system is under stress is worse than
+ * no lamp.
  */
 class SagaListenersHealth implements HealthIndicator {
 
@@ -123,6 +137,20 @@ class SagaListenersHealth implements HealthIndicator {
     @EventListener
     void onRecordsAgain(ListenerContainerNoLongerIdleEvent busyAgain) {
         lastPollNanos.put(busyAgain.getListenerId(), nanoTime.getAsLong());
+    }
+
+    /**
+     * The other half of the heartbeat: a record was delivered to a listener, which is proof the loop
+     * polled and got something. Called on the container thread by the interceptor
+     * {@code SagaParticipantConfig} installs, once per record and again once it has been handled —
+     * so a busy loop stamps at least as often as an idle one does, and a loop wedged INSIDE one
+     * record stops stamping and is still reported.
+     *
+     * <p>The id is the container's registered one, which {@link #markerFor} already accepts
+     * alongside the {@code -0} child ids the idle events carry.
+     */
+    void recordDelivered(String containerId) {
+        lastPollNanos.put(containerId, nanoTime.getAsLong());
     }
 
     /**

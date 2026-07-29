@@ -92,6 +92,47 @@ class SagaListenersHealthTest {
     }
 
     @Test
+    @DisplayName("a loop consuming without pause is UP — records are proof of life, not just empty polls")
+    void a_draining_loop_is_up() {
+        container(true, true);
+        SagaListenersHealth health = health();
+        aCompletedPoll(health);   // the last empty poll before the backlog arrives
+
+        // Now the loop never polls empty again: it is draining the duplicate storm a broker outage
+        // left behind, which is the scenario this service's own manifests plan for. No idle event is
+        // published while records keep coming, and none was published for the busy TRANSITION either
+        // (that one fires once, here it already has). The lamp used to hear nothing at all and call
+        // the working loop dead after the tolerance — at replicas: 1 that takes the only pod out of
+        // the Service exactly while the system is catching up.
+        for (int minute = 0; minute < 10; minute++) {
+            elapse(Duration.ofMinutes(1));
+            health.recordDelivered(LISTENER);
+        }
+        elapse(Duration.ofSeconds(10));
+
+        Health reported = health.health();
+        assertEquals(Status.UP, reported.getStatus(),
+                "a loop handing records to listeners is the least dead a loop can be: "
+                        + reported.getDetails());
+        assertTrue(String.valueOf(reported.getDetails().get(LISTENER)).contains("polling"),
+                reported.getDetails().toString());
+    }
+
+    @Test
+    @DisplayName("but a loop wedged inside one record is still DOWN — delivery, not arrival, is the beat")
+    void a_loop_wedged_in_one_record_is_down() {
+        container(true, true);
+        SagaListenersHealth health = health();
+        health.recordDelivered(LISTENER);
+
+        // the record went in and never came out: no further delivery, so the marker stops
+        elapse(TOLERANCE.plusSeconds(1));
+
+        assertEquals(Status.DOWN, health.health().getStatus(),
+                "stamping on records must not become a licence to hang on one of them");
+    }
+
+    @Test
     @DisplayName("a container Spring Kafka stopped is DOWN, and the details say it died abnormally")
     void a_stopped_container_is_down() {
         container(false, false);   // the consumer thread died: TopicAuthorizationException, an Error
