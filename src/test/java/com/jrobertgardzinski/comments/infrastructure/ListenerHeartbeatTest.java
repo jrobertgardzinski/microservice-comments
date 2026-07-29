@@ -19,6 +19,7 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -87,12 +88,32 @@ class ListenerHeartbeatTest {
      */
     @Test
     @DisplayName("every registered container carries the record heartbeat")
+    @SuppressWarnings("unchecked")
     void the_containers_carry_the_record_heartbeat() {
         assertFalse(registry.getListenerContainers().isEmpty(), "no containers to check");
-        registry.getListenerContainers().forEach(container -> assertNotNull(
-                ((ConcurrentMessageListenerContainer<?, ?>) container).getRecordInterceptor(),
-                container.getListenerId() + " has no record interceptor, so a loop that is busy"
-                        + " reports nothing at all and the lamp runs on empty polls alone"));
+
+        // Not merely "an interceptor is installed" — THE heartbeat one. Boot's factory sets a
+        // recordInterceptor of its own from any RecordInterceptor bean, and a non-null check would
+        // pass just as happily with someone else's, leaving recordDelivered a method nobody calls.
+        // The customizer's interceptor is an anonymous class, so its Class identifies it exactly.
+        ConcurrentMessageListenerContainer<Object, Object> probe =
+                mock(ConcurrentMessageListenerContainer.class);
+        when(probe.getListenerId()).thenReturn("probe");
+        ArgumentCaptor<RecordInterceptor<Object, Object>> expected =
+                ArgumentCaptor.forClass(RecordInterceptor.class);
+        heartbeat.configure(probe);
+        verify(probe).setRecordInterceptor(expected.capture());
+
+        registry.getListenerContainers().forEach(container -> {
+            RecordInterceptor<?, ?> installed =
+                    ((ConcurrentMessageListenerContainer<?, ?>) container).getRecordInterceptor();
+            assertNotNull(installed,
+                    container.getListenerId() + " has no record interceptor, so a loop that is busy"
+                            + " reports nothing at all and the lamp runs on empty polls alone");
+            assertSame(expected.getValue().getClass(), installed.getClass(),
+                    container.getListenerId() + " carries some OTHER interceptor: whatever it does,"
+                            + " it is not stamping this lamp");
+        });
     }
 
     /**

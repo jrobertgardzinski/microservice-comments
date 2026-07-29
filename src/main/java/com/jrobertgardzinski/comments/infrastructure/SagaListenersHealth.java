@@ -142,9 +142,14 @@ class SagaListenersHealth implements HealthIndicator {
     /**
      * The other half of the heartbeat: a record was delivered to a listener, which is proof the loop
      * polled and got something. Called on the container thread by the interceptor
-     * {@code SagaParticipantConfig} installs, once per record and again once it has been handled —
-     * so a busy loop stamps at least as often as an idle one does, and a loop wedged INSIDE one
-     * record stops stamping and is still reported.
+     * {@code SagaParticipantConfig} installs, once per record and again once it has been handled.
+     *
+     * <p>The cadence is the record's, not the idle interval's, and that is the honest description:
+     * a busy loop stamps as often as records go through it, which for a slow handler is less often
+     * than an idle loop's 10s — but never less often than one record's whole retry budget, which is
+     * exactly what the 150s tolerance was derived from. A loop wedged INSIDE one record stops
+     * stamping altogether and is still reported DOWN, which is the point of measuring delivery
+     * rather than arrival.
      *
      * <p>The id is the container's registered one, which {@link #markerFor} already accepts
      * alongside the {@code -0} child ids the idle events carry.
