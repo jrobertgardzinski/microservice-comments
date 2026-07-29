@@ -2,8 +2,11 @@ name: CI
 
 # microservice-comments needs one sibling SNAPSHOT (voting, public), so CI checks it out and
 # installs it first. Checkouts use the workspace layout (each repo in its own directory) because
-# the saga-confirmation provider test verifies microservice-offboarding's committed pact from the
-# sibling checkout. The reactor CI (in the aggregator repo) still validates everything together.
+# both provider tests verify a neighbour's committed pact from its sibling checkout — offboarding's
+# saga confirmation and user-collections' COMMENTS_DELETED cascade. A consumer that is not cloned
+# does not fail the verification, it SKIPS it, so every consumer whose pact this repo is meant to
+# honour has to be listed below. The reactor CI (in the aggregator repo) still validates everything
+# together.
 
 on:
   push:
@@ -34,11 +37,20 @@ jobs:
         with:
           repository: jrobertgardzinski/infrastructure-spring-outbox
           path: infrastructure-spring-outbox
-      # consumer of this service's confirmations — checkout only (its pacts/), no build
+      # consumers of what this service publishes — checkout only (their pacts/), no build.
+      # BOTH are required: offboarding holds the saga-confirmation pact, user-collections holds the
+      # COMMENTS_DELETED cascade pact. Until 2026-07-29 only the first was cloned, so
+      # CommentsDeletedPactProviderTest was @EnabledIf-skipped on every CI run — under a step
+      # called "including pact provider verification" — and SilentlySkippedPactTest could not
+      # complain either, because its assumeTrue on the missing directory made IT skip too.
       - uses: actions/checkout@v4
         with:
           repository: jrobertgardzinski/microservice-offboarding
           path: microservice-offboarding
+      - uses: actions/checkout@v4
+        with:
+          repository: jrobertgardzinski/microservice-user-collections
+          path: microservice-user-collections
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
@@ -53,3 +65,25 @@ jobs:
           mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests
       - name: Build and test (including pact provider verification)
         run: mvn -B --no-transfer-progress -f microservice-comments/pom.xml clean verify
+
+      # A skipped verification reads green, so the run says out loud that both executed.
+      - name: Prove the pact verifications actually ran
+        if: always()
+        run: |
+          reports=microservice-comments/target/surefire-reports
+          for test in CommentsDeletedPactProviderTest PurgeConfirmationPactProviderTest; do
+            file="$reports/TEST-com.jrobertgardzinski.comments.infrastructure.$test.xml"
+            if [ ! -f "$file" ]; then
+              echo "::error::$test produced no surefire report — it never ran."
+              ls -1 "$reports" || true
+              exit 1
+            fi
+            cases=$(grep -c '<testcase' "$file" || true)
+            skips=$(grep -c '<skipped' "$file" || true)
+            if [ "$cases" -eq 0 ] || [ "$cases" -eq "$skips" ]; then
+              echo "::error::$test executed no interaction ($cases case(s), $skips skipped)."
+              echo "The consumer pact is not where @PactFolder looks — check the checkout paths."
+              exit 1
+            fi
+            echo "$test: $cases interaction(s) verified, $skips skipped."
+          done
