@@ -66,6 +66,55 @@ jobs:
       - name: Build and test (including pact provider verification)
         run: mvn -B --no-transfer-progress -f microservice-comments/pom.xml clean verify
 
+      # Does the thing we just built actually START?
+      #
+      # `mvn verify` cannot answer that, and on 2026-07-29 it proved it twice in one afternoon over
+      # in microservice-security. Tests run on the TEST classpath and construct beans by hand; the
+      # service runs on its packaged jar and is assembled by a container. A dependency declared with
+      # a narrower scope vanished from the runtime libs (NoClassDefFoundError on boot) and a bean
+      # with two constructors and no @Inject made every health endpoint answer 500 — both through
+      # entirely green builds. Neither is exotic; both are one careless line away here too.
+      #
+      # No infrastructure needed: H2 is at runtime scope precisely so the packaged jar can come up
+      # without a database (see the pom's comment on it). What is under test is the ARTIFACT — that
+      # it assembles, wires and answers — not its behaviour, which the suite above owns.
+      #
+      # 500 is the failure being watched for: it means the endpoint itself is broken. 200 and 503
+      # are verdicts, and both are acceptable answers from a service with no broker.
+      - name: Prove the packaged service boots and answers its probes
+        run: |
+          cd microservice-comments
+          SPRING_DATASOURCE_URL='jdbc:h2:mem:bootsmoke;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE' \
+            SPRING_DATASOURCE_USERNAME=sa SPRING_DATASOURCE_PASSWORD= \
+            COMMENTS_KAFKA_ENABLED=false SERVER_PORT=18085 MANAGEMENT_SERVER_PORT=19085 \
+            java -jar target/microservice-comments-1.0.0-SNAPSHOT.jar > /tmp/boot-smoke.log 2>&1 &
+          pid=$!
+          for attempt in $(seq 1 60); do
+            curl -s -o /dev/null http://localhost:19085/actuator/health && break
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo "::error::the packaged service died during startup"
+              tail -40 /tmp/boot-smoke.log
+              exit 1
+            fi
+            sleep 2
+          done
+          fail() { echo "::error::$1"; tail -40 /tmp/boot-smoke.log; kill "$pid" 2>/dev/null; exit 1; }
+          for path in /actuator/health /actuator/health/readiness /actuator/health/liveness; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:19085$path" || echo 000)
+            case "$code" in
+              200|503) echo "$path: $code" ;;
+              *) fail "$path answered $code — the manifest probes it and would never pass" ;;
+            esac
+          done
+          # the management PORT is part of the answer: the actuator lives on its own connector so
+          # nothing routes it from the ingress, and a probe on the request port must find nothing
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:18085/actuator/health || echo 000)
+          [ "$code" = "404" ] || fail "the request port answered $code for /actuator/health; it must not serve the actuator at all"
+          # and the listener lamp has to be IN the answer, or readiness is reporting on nothing
+          curl -s http://localhost:19085/actuator/health | grep -q kafkaListeners \
+            || fail "the health report does not name kafkaListeners — the lamp was not built"
+          kill "$pid" 2>/dev/null || true
+
       # A skipped verification reads green, so the run says out loud that both executed.
       - name: Prove the pact verifications actually ran
         if: always()
