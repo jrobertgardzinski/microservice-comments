@@ -81,6 +81,60 @@ class ProbeUrlsTest {
                         + " construction, which is what makes always safe here.");
     }
 
+    /**
+     * And the port those URLs answer on, against the manifest that probes them.
+     *
+     * <p>The actuator lives on a connector of its own, which is what keeps it off the
+     * {@code comments.portal.localhost} ingress — the Service routes {@code http} and nothing
+     * routes {@code management}. That arrangement is two numbers in two files, and if they drift
+     * NOTHING here notices: the property still parses, the manifest still applies, every test in
+     * this module still passes (MockMvc has no ports at all), and the discovery is a pod that
+     * never becomes Ready. Prometheus made the same mistake on the other side of the estate — it
+     * scraped memes on the request port for a whole day after that service moved its actuator, and
+     * the only symptom was dashboards with nothing in them.
+     */
+    @Test
+    @DisplayName("the manifest probes the port the shipped properties actually put the actuator on")
+    void the_manifest_probes_the_port_the_actuator_listens_on() throws Exception {
+        java.nio.file.Path manifest = java.nio.file.Path.of("../k8s/base/comments.yaml");
+        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isRegularFile(manifest),
+                "the portal workspace is not checked out around this repo");
+
+        java.util.Properties deployed = new java.util.Properties();
+        try (java.io.InputStream file = java.nio.file.Files.newInputStream(DEPLOYED_PROPERTIES)) {
+            deployed.load(file);
+        }
+        String configured = deployed.getProperty("management.server.port");
+        org.junit.jupiter.api.Assertions.assertNotNull(configured,
+                "the actuator is expected on its own connector; without this property it shares"
+                        + " the request port and rides the ingress with it");
+
+        org.junit.jupiter.api.Assertions.assertEquals(configured, managementContainerPort(manifest),
+                "the container port named 'management' in " + manifest + " must be the port the"
+                        + " service actually opens (" + configured + "), or every probe in that"
+                        + " manifest asks a closed port and the pod never goes Ready");
+    }
+
+    /** The {@code containerPort} of the port entry named {@code management}, as a string. */
+    private static String managementContainerPort(java.nio.file.Path manifest) throws Exception {
+        java.util.List<String> lines = java.nio.file.Files.readAllLines(manifest);
+        for (int line = 0; line < lines.size(); line++) {
+            if (!lines.get(line).trim().equals("- name: management")) {
+                continue;
+            }
+            for (int next = line + 1; next < lines.size(); next++) {
+                String candidate = lines.get(next).trim();
+                if (candidate.startsWith("containerPort:")) {
+                    return candidate.substring("containerPort:".length()).trim();
+                }
+                if (candidate.startsWith("- name:")) {
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
     @Test
     @DisplayName("/actuator/health/readiness answers, and the listener lamp is in what it answers")
     void the_readiness_url_from_the_manifest_serves_the_lamp() throws Exception {
