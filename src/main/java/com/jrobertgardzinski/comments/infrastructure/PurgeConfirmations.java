@@ -87,11 +87,20 @@ class PurgeConfirmations {
     OutboxEvent confirmationOf(String sagaId, String leaver) {
         String payload;
         try {
-            payload = mapper.writeValueAsString(mapper.createObjectNode()
+            var confirmation = mapper.createObjectNode()
                     .put("type", USER_CONTENT_PURGED)
-                    .put("sagaId", sagaId)
                     .put("email", leaver)
-                    .put("version", 1));
+                    .put("version", 1);
+            // A BLANK sagaId is worse than an absent one. The orchestrator drops a confirmation
+            // whose sagaId is present but unparseable — a deliberate poison-pill rule — while one
+            // with NO sagaId falls back to matching by e-mail. So a purge command that arrived
+            // without the field (an older producer, a hand-published record) had its confirmation
+            // thrown away rather than matched, and the saga waited out its timeout for an answer
+            // that had in fact come back.
+            if (sagaId != null && !sagaId.isBlank()) {
+                confirmation.put("sagaId", sagaId);
+            }
+            payload = mapper.writeValueAsString(confirmation);
         } catch (Exception impossible) {
             // Two strings and a number. If THIS cannot be serialised nothing in this service can —
             // and a throw is right: it happens inside the purge's transaction, so the erasure rolls
