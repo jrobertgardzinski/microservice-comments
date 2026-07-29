@@ -59,10 +59,21 @@ class CorsOriginsTest {
      * casualty of moving this container's env into a ConfigMap — and the result is the traceless
      * one this whole class exists for: the browser refuses, no request reaches the service, no log
      * line is written, the pod stays Ready, and the page shows no comments.
+     *
+     * <p>The manifest lives in the portal WORKSPACE repo, one level above this one, so it is
+     * present locally and in the reactor CI (which checks this repo out at
+     * {@code portal/microservice-comments}) and absent in this repo's own CI, which clones nothing
+     * but its siblings. Skipped there, on the workspace's own skip-not-fail convention — and a skip
+     * for that reason is the one legitimate kind, exactly as {@link SilentlySkippedPactTest} spells
+     * out for the pacts.
      */
     @Test
     @DisplayName("every origin the k8s manifest sets is an origin the deployed-list case proves works")
     void the_manifest_sets_origins_this_test_actually_exercises() throws java.io.IOException {
+        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isRegularFile(MANIFEST),
+                "the portal workspace is not checked out around this repo — the one layout in which"
+                        + " a manifest guard may legitimately skip");
+
         java.util.List<String> manifestOrigins = uiOriginFrom(java.nio.file.Files.readAllLines(MANIFEST));
 
         org.junit.jupiter.api.Assertions.assertFalse(manifestOrigins.isEmpty(),
