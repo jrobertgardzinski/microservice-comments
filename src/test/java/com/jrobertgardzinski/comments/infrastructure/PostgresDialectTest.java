@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * The dialect bet, settled on the real database: the standard-SQL MERGE upserts and the V3
- * foreign key against PostgreSQL 16 itself (postgres:16-alpine via Testcontainers, the same
+ * foreign key against PostgreSQL 18 itself (postgres:18-alpine via Testcontainers, the same
  * Flyway migrations as production), not only H2's PostgreSQL mode. Three things H2 could not
  * prove:
  *
@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class PostgresDialectTest {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:18-alpine");
 
     static DriverManagerDataSource dataSource;
     static JdbcClient jdbc;

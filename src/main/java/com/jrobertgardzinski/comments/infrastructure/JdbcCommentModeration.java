@@ -14,7 +14,7 @@ import java.util.Set;
  * delete, keeping the "a row means hidden" invariant. MERGE, not Postgres' {@code ON CONFLICT}:
  * H2 2.3's PostgreSQL mode only accepts a targetless {@code ON CONFLICT DO NOTHING}, while
  * standard MERGE is spoken by both H2 and Postgres 15+ (the stack runs 16 — and the MERGE
- * dialect is under test on the real PostgreSQL 16 in PostgresDialectTest, not only on H2).
+ * dialect is under test on the real PostgreSQL 18 in PostgresDialectTest, not only on H2).
  * Unlike ON CONFLICT, MERGE gives no atomicity against a concurrent insert: two moderators hiding
  * the same comment can both take WHEN NOT MATCHED and the loser hits the primary key — the race
  * is not gone, it is reduced to one rare retry (the second pass lands in WHEN MATCHED). The

@@ -18,22 +18,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: microservice-comments
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/voting
           path: voting
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/offline-jwt
           path: offline-jwt
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/transactional-outbox
           path: transactional-outbox
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/infrastructure-spring-outbox
           path: infrastructure-spring-outbox
@@ -43,16 +43,16 @@ jobs:
       # CommentsDeletedPactProviderTest was @EnabledIf-skipped on every CI run — under a step
       # called "including pact provider verification" — and SilentlySkippedPactTest could not
       # complain either, because its assumeTrue on the missing directory made IT skip too.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/microservice-offboarding
           path: microservice-offboarding
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/microservice-user-collections
           path: microservice-user-collections
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'

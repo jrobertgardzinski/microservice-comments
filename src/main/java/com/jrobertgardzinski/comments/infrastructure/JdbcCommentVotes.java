@@ -22,7 +22,7 @@ import java.util.Optional;
  * concurrent insert: two first-time casts by the same voter can both take WHEN NOT MATCHED and
  * the loser hits the primary key — the race is not gone, it is reduced to one rare retry (the
  * second pass lands in WHEN MATCHED). Proven against the real schema by JdbcPersistenceTest
- * (H2, every run) and by PostgresDialectTest against PostgreSQL 16 itself (Testcontainers,
+ * (H2, every run) and by PostgresDialectTest against PostgreSQL 18 itself (Testcontainers,
  * docker runs): the upsert, the real 23505-on-race → DuplicateKeyException that this retry
  * answers, and the 23503 foreign key behind {@link UnknownComment} are all under test on the
  * production dialect, not taken on faith from H2's PostgreSQL mode.
