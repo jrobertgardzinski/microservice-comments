@@ -109,9 +109,15 @@ class IdempotentCommandsTest {
                     }
                 };
 
+        final FakeCommentErasure erasure = new FakeCommentErasure(comments);
+
         Map<String, Object> fingerprint() {
             Map<String, Object> f = new LinkedHashMap<>();
             f.put("comments", List.copyOf(comments));
+            // the saga's reservations are state like any other: a redelivered mark that MOVED an
+            // old obligation's timestamp is exactly the drift ADR 0006 forbids, and it would be
+            // invisible without this line
+            f.put("marks", erasure.marks());
             f.put("hidden", Map.copyOf(hidden));
             f.put("votes", votes.entrySet().stream().collect(
                     LinkedHashMap::new, (m, e) -> m.put(e.getKey(), Map.copyOf(e.getValue())),
@@ -119,6 +125,10 @@ class IdempotentCommandsTest {
             return f;
         }
     }
+
+    /** A stopped clock: two runs of the same command must not differ by when they ran. */
+    private static final java.time.Clock CLOCK = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-08-08T10:00:00Z"), java.time.ZoneOffset.UTC);
 
     private static final Map<String, Consumer<World>> COMMANDS = commands();
 
@@ -136,10 +146,21 @@ class IdempotentCommandsTest {
         // in this map, which is not "every command" however the javadoc read
         c.put("hide a comment (moderator)",
                 w -> new HideComment(w.repository, w.moderation).execute("c1", true, true));
+        c.put("mark a leaver's comments for erasure",
+                w -> new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com"));
+        c.put("compensate: mark, then restore",
+                w -> {
+                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com");
+                    new RestoreUserComments(w.erasure).execute("alice@example.com");
+                });
         c.put("purge a leaver's comments (default rule)",
-                w -> new PurgeUserComments(w.repository, w.commentVotes,
-                        new PurgeRule.AnonymizeAuthor())
-                        .execute("alice@example.com", Optional.empty()));
+                w -> {
+                    // the whole saga, both phases: the closure erases what the mark reserved
+                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com");
+                    new PurgeUserComments(w.repository, w.erasure, w.commentVotes,
+                            new PurgeRule.AnonymizeAuthor())
+                            .execute("alice@example.com", Optional.empty());
+                });
         return c;
     }
 

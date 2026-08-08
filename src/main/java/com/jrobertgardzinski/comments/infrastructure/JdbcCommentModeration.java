@@ -77,7 +77,7 @@ class JdbcCommentModeration implements CommentModeration {
     public Set<String> hiddenIn(String memeId) {
         // .list() materialises and closes the connection; .stream() would keep the cursor open
         return Set.copyOf(jdbc.sql("SELECT f.comment_id FROM comment_flags f "
-                        + "JOIN comments c ON c.id = f.comment_id WHERE c.meme_id = ? AND f.hidden")
+                        + "JOIN active_comments c ON c.id = f.comment_id WHERE c.meme_id = ? AND f.hidden")
                 .params(memeId).query(String.class).list());
     }
 }

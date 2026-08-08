@@ -8,7 +8,10 @@ import com.jrobertgardzinski.comments.application.DeleteComment;
 import com.jrobertgardzinski.comments.application.DeleteThread;
 import com.jrobertgardzinski.comments.application.HideComment;
 import com.jrobertgardzinski.comments.application.ListComments;
+import com.jrobertgardzinski.comments.application.CommentErasure;
+import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.MemeDirectory;
+import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
 import com.jrobertgardzinski.comments.config.PurgeRule;
@@ -81,17 +84,34 @@ class CommentsConfig {
     }
 
     @Bean
-    PurgeUserComments purgeUserComments(CommentRepository commentRepository, CommentVotes commentVotes,
+    PurgeUserComments purgeUserComments(CommentRepository commentRepository, CommentErasure erasure,
+                                        CommentVotes commentVotes,
                                         PurgeRule defaultCommentsPurgeRule,
                                         PlatformTransactionManager transactionManager) {
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
         // the whole GDPR sweep is one unit: a crash mid-purge must not leave half an account gone
-        return new PurgeUserComments(commentRepository, commentVotes, defaultCommentsPurgeRule) {
+        return new PurgeUserComments(commentRepository, erasure, commentVotes, defaultCommentsPurgeRule) {
             @Override
             public void execute(String author, Optional<PurgeRule> requested) {
                 tx.executeWithoutResult(status -> super.execute(author, requested));
             }
         };
+    }
+
+    /**
+     * The saga's reversible step and its inverse. Neither needs a transactional decorator: both are
+     * driven only by {@code PurgeCommandsListener}, which already opens ONE transaction per command
+     * so the work and the outbox row reporting it commit together.
+     */
+    @Bean
+    MarkUserCommentsForErasure markUserCommentsForErasure(CommentErasure erasure,
+                                                          java.time.Clock clock) {
+        return new MarkUserCommentsForErasure(erasure, clock);
+    }
+
+    @Bean
+    RestoreUserComments restoreUserComments(CommentErasure erasure) {
+        return new RestoreUserComments(erasure);
     }
 
     @Bean

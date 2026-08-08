@@ -90,6 +90,12 @@ class PurgeAndCascadeTest {
         }
     };
 
+    private final FakeCommentErasure erasure = new FakeCommentErasure(comments);
+    private final java.time.Clock clock = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-08-08T10:00:00Z"), java.time.ZoneOffset.UTC);
+    private final MarkUserCommentsForErasure mark = new MarkUserCommentsForErasure(erasure, clock);
+    private final RestoreUserComments restore = new RestoreUserComments(erasure);
+
     @Test
     @DisplayName("default purge keeps texts as 'deleted account'; KEEP_POPULAR decides by score")
     void purge_honours_the_rules() {
@@ -97,13 +103,55 @@ class PurgeAndCascadeTest {
         comments.add(new Comment("ignored", "m1", "leaver@example.com", "goner"));
         votes.put("praised", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
 
-        new PurgeUserComments(repository, commentVotes, new PurgeRule.AnonymizeAuthor())
+        // the saga in full: the reversible mark, then the orchestrator's closure
+        mark.execute("leaver@example.com");
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
                 .execute("leaver@example.com", Optional.of(new PurgeRule.KeepPopularAnonymized(1)));
 
         assertEquals(1, comments.size());
         assertEquals("keeper", comments.get(0).text());
         assertEquals(DeletedAccount.AUTHOR, comments.get(0).author());
         assertTrue(!votes.containsKey("ignored"));
+        assertTrue(!erasure.isMarked("praised"),
+                "a comment the rule keeps belongs back in the thread, not in the erasure backlog");
+    }
+
+    @Test
+    @DisplayName("the mark hides the leaver's comments and destroys nothing")
+    void the_mark_is_reversible() {
+        comments.add(new Comment("reserved", "m1", "leaver@example.com", "still here"));
+        votes.put("reserved", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
+
+        mark.execute("leaver@example.com");
+
+        assertTrue(erasure.isMarked("reserved"), "out of the thread");
+        assertEquals(1, comments.size(), "...and still stored");
+        assertEquals(Map.of("fan@example.com", VoteDirection.UP), votes.get("reserved"));
+    }
+
+    @Test
+    @DisplayName("the compensation puts the conversation back exactly as it was")
+    void restore_undoes_the_mark() {
+        comments.add(new Comment("reserved", "m1", "leaver@example.com", "still here"));
+        mark.execute("leaver@example.com");
+
+        restore.execute("leaver@example.com");
+
+        assertTrue(!erasure.isMarked("reserved"));
+        assertEquals("leaver@example.com", comments.get(0).author());
+        assertEquals("still here", comments.get(0).text());
+    }
+
+    @Test
+    @DisplayName("a closure that arrives without a mark erases nothing")
+    void the_closure_only_acts_on_what_the_mark_reserved() {
+        comments.add(new Comment("never-marked", "m1", "leaver@example.com", "untouched"));
+
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.Delete())
+                .execute("leaver@example.com", Optional.empty());
+
+        assertEquals(1, comments.size(),
+                "the erasure acts on the reservation, never on 'everything by that author'");
     }
 
     @Test

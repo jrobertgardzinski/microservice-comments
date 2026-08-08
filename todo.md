@@ -52,6 +52,16 @@ Tylko otwarte rzeczy. Historia = git log.
   przełączone na `.list()` (bliźniaczo w memes `JdbcContentFlags`).
 
 ## Otwarte
+- **Kompensacja sagi offboardingu (ADR 0007) — WDROŻONE 2026-08-08.** Komenda czyszczenia
+  **oznacza** treści (`PENDING_ERASURE` + `markedForErasureAt`), kasuje dopiero
+  `ERASE_USER_CONTENT`, a `RESTORE_USER_CONTENT` cofa oznaczenie. Filtr `ACTIVE` jest w jednym
+  miejscu — w widoku bazodanowym — a strażnik źródeł wywala build, gdy jakikolwiek SQL poza
+  adapterem wymazywania nazwie tabelę bazową. Otwarte:
+  - **Alarm zaległości nie ma reguły w Prometheusie** — jest gauge (`*_erasure_backlog`) i linia
+    w logu, nie ma alertu. Zgubione domknięcie to problem RODO, więc powinien być.
+  - (opc.) `pendingSince` używa tylko `StuckErasureWatch`; gdyby kiedyś przyszła polityka
+    retencji, to jest miejsce, w którym się ją dopina — ale **nigdy** jako kasowanie z upływu czasu.
+
 - ~~Cucumber + Allure jak w pozostałych~~ — ZROBIONE (2026-07-04): `comment-thread.feature`
   (5 scenariuszy po HTTP: komentarz zalogowanego, odmowa anonima, odmowa pod nieznanym memem,
   głosy-przełączniki ze score w listingu, kaskada MEME_DELETED — listener wołany wprost przez

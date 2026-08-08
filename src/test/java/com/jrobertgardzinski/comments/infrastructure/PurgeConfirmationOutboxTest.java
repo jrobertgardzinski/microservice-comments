@@ -2,7 +2,9 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.outbox.OutboxRepublisher;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -55,10 +57,12 @@ class PurgeConfirmationOutboxTest {
     private final KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
 
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
+    private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
 
     private final OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
 
-    private final PurgeCommandsListener listener = new PurgeCommandsListener(purgeUserComments,
+    private final PurgeCommandsListener listener = new PurgeCommandsListener(
+            markForErasure, mock(RestoreUserComments.class), purgeUserComments,
             new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
 
     private OutboxRepublisher republisher() {
@@ -74,7 +78,7 @@ class PurgeConfirmationOutboxTest {
 
         listener.receive(COMMAND, "cid-of-the-deletion");
 
-        verify(purgeUserComments).execute(LEAVER, Optional.empty());
+        verify(markForErasure).execute(LEAVER);
         ArgumentCaptor<ProducerRecord<String, String>> firstTry =
                 ArgumentCaptor.forClass(ProducerRecord.class);
         verify(kafka).send(firstTry.capture());
@@ -150,7 +154,7 @@ class PurgeConfirmationOutboxTest {
     @DisplayName("a purge that throws writes nothing at all and lets the failure out to the container")
     void a_failing_purge_writes_nothing() {
         doThrow(new org.springframework.dao.DataAccessResourceFailureException("no database"))
-                .when(purgeUserComments).execute(LEAVER, Optional.empty());
+                .when(markForErasure).execute(LEAVER);
 
         assertThrows(org.springframework.dao.DataAccessResourceFailureException.class,
                 () -> listener.receive(COMMAND, null));

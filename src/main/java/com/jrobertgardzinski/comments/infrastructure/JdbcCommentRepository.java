@@ -9,7 +9,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/** Postgres-backed {@link CommentRepository} (H2 in tests); schema in V1. */
+/**
+ * Postgres-backed {@link CommentRepository} (H2 in tests); schema in V1.
+ *
+ * <p><strong>Every SELECT below names {@code active_comments}, never {@code comments}</strong> —
+ * the view V6 created, whose whole body is {@code WHERE status = 'ACTIVE'}. That is the single
+ * place this service's account-deletion filter is written down: a comment a running saga has marked
+ * is absent from the thread, from its paging, from its count and from the single-comment lookups
+ * that the vote and moderation paths gate on, without any of those queries knowing that erasure
+ * exists. Writes still name the table — and {@code CommentReadFilterTest} enforces exactly that
+ * split, so the next SELECT written here cannot quietly become the leak.
+ */
 @Repository
 class JdbcCommentRepository implements CommentRepository {
 
@@ -29,32 +39,32 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public List<Comment> findByMeme(String memeId) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE meme_id = ? ORDER BY created_at")
+        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE meme_id = ? ORDER BY created_at")
                 .param(memeId).query(this::toComment).list();
     }
 
     @Override
     public List<Comment> findByMeme(String memeId, int offset, int limit) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE meme_id = ? "
+        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE meme_id = ? "
                         + "ORDER BY created_at LIMIT ? OFFSET ?")
                 .params(memeId, limit, offset).query(this::toComment).list();
     }
 
     @Override
     public int countByMeme(String memeId) {
-        return jdbc.sql("SELECT COUNT(*) FROM comments WHERE meme_id = ?")
+        return jdbc.sql("SELECT COUNT(*) FROM active_comments WHERE meme_id = ?")
                 .param(memeId).query((rs, n) -> rs.getInt(1)).single();
     }
 
     @Override
     public Optional<Comment> find(String commentId) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE id = ?")
+        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE id = ?")
                 .param(commentId).query(this::toComment).optional();
     }
 
     @Override
     public List<Comment> findByAuthor(String author) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM comments WHERE author = ?")
+        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE author = ?")
                 .param(author).query(this::toComment).list();
     }
 

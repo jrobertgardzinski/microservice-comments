@@ -1,7 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,8 +36,9 @@ class PurgeConfirmationTopicTest {
     /** The real listener, the real confirmation builder, the real mapping onto a producer record. */
     private static ProducerRecord<String, String> realConfirmation() throws Exception {
         CapturedConfirmations confirmations = new CapturedConfirmations();
-        new PurgeCommandsListener(mock(PurgeUserComments.class), confirmations, new ObjectMapper(),
-                NoTransactions.template())
+        new PurgeCommandsListener(mock(MarkUserCommentsForErasure.class),
+                mock(RestoreUserComments.class), mock(PurgeUserComments.class), confirmations,
+                new ObjectMapper(), NoTransactions.template())
                 .receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + SAGA + "\","
                         + "\"email\":\"leaver@example.com\"}", null);
         // the same mapping the outbox's dispatch performs on the stored row, first attempt or

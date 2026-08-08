@@ -3,7 +3,9 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -61,8 +63,9 @@ class CommentsEventsTopicTest {
 
     private final OutboxTestDatabase db = OutboxTestDatabase.with(kafka);
 
-    private final PurgeCommandsListener saga = new PurgeCommandsListener(purgeUserComments,
-            new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
+    private final PurgeCommandsListener saga = new PurgeCommandsListener(
+            mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
+            purgeUserComments, new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
     private final MemesEventsListener cascade = new MemesEventsListener(deleteThread,
             new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());
 

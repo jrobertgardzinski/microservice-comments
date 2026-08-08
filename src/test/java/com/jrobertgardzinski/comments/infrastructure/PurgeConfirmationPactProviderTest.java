@@ -7,7 +7,9 @@ import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvide
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -56,8 +58,10 @@ class PurgeConfirmationPactProviderTest {
     @PactVerifyProvider("a user content purged confirmation")
     public String aUserContentPurgedConfirmation() throws Exception {
         CapturedConfirmations confirmations = new CapturedConfirmations();
-        PurgeCommandsListener listener = new PurgeCommandsListener(mock(PurgeUserComments.class),
-                confirmations, new ObjectMapper(), NoTransactions.template());
+        PurgeCommandsListener listener = new PurgeCommandsListener(
+                mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
+                mock(PurgeUserComments.class), confirmations, new ObjectMapper(),
+                NoTransactions.template());
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\","
                 + "\"sagaId\":\"7d9f9e2a-1f0a-4f6e-9a1b-2c3d4e5f6a7b\","
                 + "\"email\":\"leaver@example.com\"}", null);
