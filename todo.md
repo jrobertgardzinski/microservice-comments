@@ -57,8 +57,11 @@ Tylko otwarte rzeczy. Historia = git log.
   `ERASE_USER_CONTENT`, a `RESTORE_USER_CONTENT` cofa oznaczenie. Filtr `ACTIVE` jest w jednym
   miejscu — w widoku bazodanowym — a strażnik źródeł wywala build, gdy jakikolwiek SQL poza
   adapterem wymazywania nazwie tabelę bazową. Otwarte:
-  - **Alarm zaległości nie ma reguły w Prometheusie** — jest gauge (`*_erasure_backlog`) i linia
-    w logu, nie ma alertu. Zgubione domknięcie to problem RODO, więc powinien być.
+  - ~~Alarm zaległości nie ma reguły w Prometheusie~~ — ZROBIONE 2026-08-08:
+    reguła `ErasureBacklogStuck` w `../../shared/observability/alert-rules.yml`
+    (jedna na trzy serwisy, dopasowanie po sufiksie metryki; `comments_erasure_backlog`).
+    **Zostaje**: reguły żyją tylko w stosie compose — wdrożenie k3s nie ma Prometheusa
+    (zapisane w `../k8s/README.md` jako dług przyszłego overlaya observability).
   - (opc.) `pendingSince` używa tylko `StuckErasureWatch`; gdyby kiedyś przyszła polityka
     retencji, to jest miejsce, w którym się ją dopina — ale **nigdy** jako kasowanie z upływu czasu.
 
