@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
@@ -22,6 +23,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 @AutoConfigureMockMvc
+// Its OWN database, and the reason is a real red build rather than tidiness. Every test in this
+// module shared `jdbc:h2:mem:comments`, and the account-deletion tests that run in the same JVM
+// purge a leaver's votes — bob's among them. Which of them runs first is decided by surefire's
+// default runOrder, i.e. by the FILESYSTEM: locally this class ran before them and was green,
+// on the CI runner it ran after them and lost bob's vote ("$[0].myVote expected:<UP> but was
+// <null>"), deterministically, on every run. A round-trip test of one controller has no business
+// depending on that, so it stops sharing.
+@TestPropertySource(properties =
+        "spring.datasource.url=jdbc:h2:mem:comments_controller;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE")
 class CommentControllerTest {
 
     private static final String AUTH = "Bearer " + TestAuthConfig.VALID_TOKEN;
