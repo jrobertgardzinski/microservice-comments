@@ -59,4 +59,8 @@ deleted comment sheds it by cascade.
 ../mvnw -f pom.xml test    # unit + MockMvc black-box on the real JDBC adapters (H2)
 ```
 
+The behaviour contract is the Gherkin specs in [`specs/`](./specs) — one file per use case
+(add, list, vote, delete, thread cascade, hide), driven over real HTTP by Cucumber in every
+build; results feed Allure.
+
 In the compose stack: port 8085, own Postgres (`comments-postgres`).

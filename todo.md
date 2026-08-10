@@ -69,6 +69,8 @@ Tylko otwarte rzeczy. Historia = git log.
   (5 scenariuszy po HTTP: komentarz zalogowanego, odmowa anonima, odmowa pod nieznanym memem,
   głosy-przełączniki ze score w listingu, kaskada MEME_DELETED — listener wołany wprost przez
   beana-ogłoszeniodawcę, broker to nie kontrakt; hook @Before resetuje wątek kaskadą).
+  2026-08-10: rozbite na `specs/*.feature` przy szczycie repo — jeden use-case, jeden plik
+  (konwencja microservice-security: build-helper na classpath, Rule/Example, język biznesowy).
 - **Słownik `PurgeRule` zduplikowany** z memes (celowo — wspólny kontrakt tekstowy); rozważyć
   malutką libkę, jeśli urośnie trzeci konsument.
 - **Deduplikacja konsumenta** — purge idempotentny, więc zbędna; przy nie-idempotentnych

@@ -11,7 +11,7 @@ backlog realnie mały. Zadania od góry.
 - Brama do security: `HttpSecurityAuthenticationGate` (/me) oraz
   `JwtSecurityAuthenticationGate` (offline po JWKS, commit `7609b7c`+`bc408b8`);
   `Caller{email,roles}`. Istnienie mema przez HEAD do memes.
-- Testy: unit + `comment-thread.feature` (+ moderacja) po HTTP; Allure.
+- Testy: unit + BDD po HTTP (`specs/*.feature` — jeden use-case, jeden plik); Allure.
 - Build: `../mvnw -q -pl microservice-comments -am package` z korzenia workspace
   albo `mvn test` w repo (wrapper workspace'owy). Smoke: `cd .. && ./infra-smoke.sh`.
 - Commit: angielska jednolinijkowa obrazowa wiadomość + stopka Co-Authored-By.
