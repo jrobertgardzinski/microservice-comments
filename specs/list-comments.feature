@@ -1,12 +1,13 @@
 Feature: Reading a THREAD
 
-  Reading is public: anyone browses a MEME's THREAD one page at a time. The listing
-  guards privacy — a COMMENT is signed with a masked name and the full address never
-  leaves the service — while the author still recognises their own words. VOTES are
-  a side dish: when the tally is unavailable, the THREAD still reads.
+  Reading is public: a GUEST browses a MEME's THREAD one page at a time. The
+  listing guards privacy — a COMMENT is signed with a masked name and the full
+  address never leaves the portal — while the author still recognises their own
+  words. VOTES are a side dish: when the tally is unavailable, the THREAD still
+  reads.
 
   Background:
-    Given a signed-in USER
+    Given a USER
 
   Rule: A long THREAD is read one page at a time — every COMMENT exactly once
 
@@ -27,7 +28,7 @@ Feature: Reading a THREAD
 
     Example:
       Given the USER's COMMENT "Miło poznać" under the known MEME
-      Then a reader learns who wrote it only as a masked name
+      Then a GUEST learns who wrote it only as a masked name
       And the USER's full address appears nowhere in the listing
 
   Rule: Behind the mask, the author still recognises their own words
@@ -35,7 +36,7 @@ Feature: Reading a THREAD
     Example:
       Given the USER's COMMENT "To moje słowa" under the known MEME
       Then the author still recognises that COMMENT as their own
-      But another signed-in USER sees it as someone else's
+      But another USER sees it as someone else's
 
   Rule: The THREAD survives the VOTE count going missing
 

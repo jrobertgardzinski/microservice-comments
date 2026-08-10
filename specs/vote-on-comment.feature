@@ -7,7 +7,7 @@ Feature: Voting on a COMMENT
   Rule: One USER, one VOTE — and repeating the VOTE retracts it
 
     Example:
-      Given a signed-in USER
+      Given a USER
       And the USER's COMMENT "Plusujcie" under the known MEME
       When 2 USERS up-vote that COMMENT
       And the same second USER up-votes it again

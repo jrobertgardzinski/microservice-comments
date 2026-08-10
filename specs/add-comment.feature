@@ -1,34 +1,36 @@
+# engineer's note: the author is taken from the confirmed identity behind the token,
+# never from the request body — the sign-in gate is where that promise is kept
 Feature: Adding a COMMENT
 
-  Signed-in USERS discuss under an existing MEME. The COMMENT's author is the identity
-  the security service confirmed, never a field of the request — reading the portal is
-  public, so writing is where the door is guarded. And a COMMENT is a remark, not an
-  essay: the THREAD stays a conversation, not a blog.
+  USERS discuss under an existing MEME: a GUEST reads, writing takes a USER, and
+  every COMMENT is signed by who really wrote it — nobody puts words in someone
+  else's mouth. A COMMENT is a remark, not an essay: the THREAD stays a
+  conversation, not a blog.
 
-  Rule: A signed-in USER comments under a MEME that exists
+  Rule: A USER comments under a MEME that exists
 
     Example:
-      Given a signed-in USER
+      Given a USER
       When the USER comments "Świetny mem!" under the known MEME
       Then the THREAD of the known MEME shows 1 COMMENT by the USER
 
-  Rule: Without signing in there is no commenting
+  Rule: A GUEST may read, not write
 
     Example:
-      When someone comments anonymously under the known MEME
+      When a GUEST comments under the known MEME
       Then the COMMENT is refused as sign-in required
 
   Rule: A COMMENT needs a real MEME to hang under
 
     Example:
-      Given a signed-in USER
+      Given a USER
       When the USER comments "Halo?" under a MEME nobody has seen
       Then the COMMENT is refused because the MEME is unknown
 
   Rule: A COMMENT is a remark, not an essay
 
     Example:
-      Given a signed-in USER
+      Given a USER
       When the USER posts a COMMENT of 2001 characters under the known MEME
       Then the COMMENT is refused as too long
       When the USER posts a COMMENT of 2000 characters under the known MEME

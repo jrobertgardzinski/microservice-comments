@@ -56,7 +56,7 @@ public class CommentsSteps {
         cascadeAnnouncements.forget();
     }
 
-    @Given("a signed-in USER")
+    @Given("a USER")
     public void aSignedInUser() {
         memeId = TestAuthConfig.EXISTING_MEME;
     }
@@ -74,7 +74,7 @@ public class CommentsSteps {
         assertEquals(201, lastResponse.statusCode());
     }
 
-    @When("someone comments anonymously under the known MEME")
+    @When("a GUEST comments under the known MEME")
     public void anonymousComment() {
         lastResponse = RestAssured.given().port(port)
                 .contentType("application/json")
@@ -279,7 +279,7 @@ public class CommentsSteps {
         lastResponse = setHidden(TestAuthConfig.SECOND_TOKEN, true);
     }
 
-    @Then("a reader sees that COMMENT as hidden without its text")
+    @Then("a GUEST sees that COMMENT as hidden without its text")
     public void readerSeesTombstone() {
         var comment = threadEntry(null, commentId);
         assertEquals(Boolean.TRUE, comment.get("hidden"), "a hidden comment must be flagged");
@@ -293,7 +293,7 @@ public class CommentsSteps {
         assertEquals("Kontrowersyjne", comment.get("text"), "the author still sees their own words");
     }
 
-    @Then("a reader sees that COMMENT's text again")
+    @Then("a GUEST sees that COMMENT's text again")
     public void readerSeesTextAgain() {
         var comment = threadEntry(null, commentId);
         assertNull(comment.get("hidden"), "a revealed comment carries no hidden flag");
@@ -323,14 +323,14 @@ public class CommentsSteps {
         assertEquals("MISSING_HIDDEN", lastResponse.jsonPath().getString("status"));
     }
 
-    @Then("a reader still sees that COMMENT's text")
+    @Then("a GUEST still sees that COMMENT's text")
     public void readerStillSeesText() {
         var comment = threadEntry(null, commentId);
         assertNull(comment.get("hidden"), "an undecided request must not touch the comment");
         assertEquals(commentText, comment.get("text"));
     }
 
-    @Then("a reader learns who wrote it only as a masked name")
+    @Then("a GUEST learns who wrote it only as a masked name")
     public void readerSeesOnlyMaskedName() {
         String masked = TestAuthConfig.SIGNED_IN_USER.charAt(0) + "***"
                 + TestAuthConfig.SIGNED_IN_USER.substring(TestAuthConfig.SIGNED_IN_USER.indexOf('@'));
@@ -350,7 +350,7 @@ public class CommentsSteps {
                 "behind the masked name, the author still recognises their own words");
     }
 
-    @Then("another signed-in USER sees it as someone else's")
+    @Then("another USER sees it as someone else's")
     public void strangerDoesNotClaimIt() {
         assertEquals(Boolean.FALSE, threadEntry(TestAuthConfig.SECOND_TOKEN, commentId).get("own"),
                 "a stranger's comment is not marked as the viewer's own");

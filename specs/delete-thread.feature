@@ -6,7 +6,7 @@ Feature: A deleted MEME takes its THREAD along
   stays silent when there was nothing to take.
 
   Background:
-    Given a signed-in USER
+    Given a USER
 
   Rule: The THREAD goes with the MEME, and the cascade passes the baton on
 

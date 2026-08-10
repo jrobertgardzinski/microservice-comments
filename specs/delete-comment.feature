@@ -1,12 +1,11 @@
 Feature: Deleting a COMMENT
 
   A COMMENT belongs to its author: the author may take their own words down, a
-  stranger may not, and a MODERATOR — a role the security service vouches for —
-  may take down anyone's. A single deletion is nobody else's business: no cascade
-  is announced for it.
+  stranger may not, and a MODERATOR may take down anyone's. A single deletion is
+  nobody else's business: no cascade is announced for it.
 
   Background:
-    Given a signed-in USER
+    Given a USER
 
   Rule: The author takes their own COMMENT down; a stranger cannot
 
