@@ -7,6 +7,8 @@ import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * OUTSIDE the transaction (in MemesEventsListener, after the decorated use case returned). That
  * arrangement is only worth as much as a test against a real transaction manager proves it to be.
  */
+@Epic("Infrastructure")
+@Feature("Transaction boundaries")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class,
         TransactionalDecoratorsTest.FailingPorts.class})
 class TransactionalDecoratorsTest {

@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * no longer exists. Unlike the pact test this one has no {@code @EnabledIf} — it needs no
  * neighbouring checkout, so it runs in every layout, including a solo one.
  */
+@Epic("Infrastructure")
+@Feature("Cascade topic names")
 class CascadeTopicNamesTest {
 
     /** See the class comment: the twin literal lives in microservice-memes. */

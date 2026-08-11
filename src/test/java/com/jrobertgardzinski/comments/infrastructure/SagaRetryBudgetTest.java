@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.backoff.BackOffExecution;
@@ -20,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * case and five minutes in the second — which is why the budget is measured on the wall clock, and why
  * this test drives the clock rather than the count.
  */
+@Epic("Saga")
+@Feature("Purge retries")
+@Story("Retry budget")
 class SagaRetryBudgetTest {
 
     /** The steerable clock: nanoseconds this test hands out, in the order it chooses. */

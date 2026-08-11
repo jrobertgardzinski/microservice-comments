@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,9 @@ import static org.mockito.Mockito.when;
  * the container Spring Kafka stopped on an unrecoverable error, the loop wedged inside one record, and
  * (the one that costs the most) a service that never got a listener at all.
  */
+@Epic("Infrastructure")
+@Feature("Health probes")
+@Story("Listener lamp")
 class SagaListenersHealthTest {
 
     private static final Duration TOLERANCE = Duration.ofSeconds(150);

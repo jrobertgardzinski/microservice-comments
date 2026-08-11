@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,9 @@ import static org.mockito.Mockito.mock;
  * ({@code comments=comments-events}) and in the deployment's {@code OFFBOARDING_PARTICIPANTS}.
  * Changing the string here REQUIRES changing it there.
  */
+@Epic("Saga")
+@Feature("Purge confirmation")
+@Story("Topic name")
 class PurgeConfirmationTopicTest {
 
     /** See the class comment: the twin literal lives in microservice-offboarding. */

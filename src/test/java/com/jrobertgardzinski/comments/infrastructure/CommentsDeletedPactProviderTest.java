@@ -9,6 +9,8 @@ import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
@@ -57,6 +59,8 @@ import static org.mockito.Mockito.when;
  * weeks after the workspace split, and a contract test that never runs is indistinguishable from one
  * that passes.
  */
+@Epic("Contract")
+@Feature("Comments-deleted announcement")
 @Provider("microservice-comments")
 @PactFolder(CommentsDeletedPactProviderTest.PACT_FOLDER)
 @EnabledIf(value = "consumerPactCheckedOut",

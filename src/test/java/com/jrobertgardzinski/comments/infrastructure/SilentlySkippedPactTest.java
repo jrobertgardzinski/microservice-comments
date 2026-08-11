@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +29,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * that the one thing it can prove — "nothing here is being skipped for the wrong reason" — is proven
  * on every run.
  */
+@Epic("Contract")
+@Feature("Pact skip guard")
 class SilentlySkippedPactTest {
 
     /** Relative to the REPO directory, which is what surefire makes the working directory. */

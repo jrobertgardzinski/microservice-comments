@@ -3,6 +3,9 @@ package com.jrobertgardzinski.comments.application;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The listing must survive the vote store being down: comments still come back, with their
  * tallies marked unknown (null) — votes are a side dish, not the meal.
  */
+@Epic("Use case")
+@Feature("List comments")
+@Story("Vote store degradation")
 class ListCommentsDegradationTest {
 
     private final CommentRepository repository = new CommentRepository() {

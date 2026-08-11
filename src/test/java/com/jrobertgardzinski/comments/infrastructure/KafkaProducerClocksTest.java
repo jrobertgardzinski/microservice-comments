@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +61,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * override's NAME as well — a deployment manifest setting the wrong variable name would leave the
  * default in place, and the default is the value this service promises.
  */
+@Epic("Infrastructure")
+@Feature("Kafka configuration pins")
+@Story("Producer blocking clocks")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class},
         // sentinels, not the real numbers: half 2 is about the PATH from a property to the producer,
         // and values that could also come from somewhere else would not prove a path

@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * sign-in filter, the controller, the JSON — while staying a unit of THIS service, with no port,
  * no waiting and nothing to be flaky about.
  */
+@Epic("Infrastructure")
+@Feature("Comments HTTP API")
+@Story("Rate-limited commenting")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class}, properties = {
         // the property rather than a @Primary bean, so the refusal travels the real wiring, dial
         // included, and this test would notice if that wiring were ever bypassed

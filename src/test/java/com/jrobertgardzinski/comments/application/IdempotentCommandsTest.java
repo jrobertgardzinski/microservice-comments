@@ -3,6 +3,8 @@ package com.jrobertgardzinski.comments.application;
 import com.jrobertgardzinski.comments.config.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * pins as its own scenario — and was neither enforced nor declared. A registry that quietly omits
  * the interesting cases is worse than no registry, because it reads like proof.
  */
+@Epic("Use case")
+@Feature("Idempotent commands")
 class IdempotentCommandsTest {
 
     /** A fresh little world per run: two threads, three comments, some votes. */

@@ -6,6 +6,8 @@ import com.jrobertgardzinski.comments.application.DeleteThread;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +47,8 @@ import static org.mockito.Mockito.when;
  * two events are now built ten lines apart by the same mechanism, so "the cascade must not look like a
  * confirmation" is a property worth re-asserting on every run.
  */
+@Epic("Infrastructure")
+@Feature("Shared events topic")
 class CommentsEventsTopicTest {
 
     private static final String SAGA_OF_THE_KEYING_TEST = "b1a7c0de-0000-4000-8000-abcdefabcdef";

@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.domain;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * instant" cannot be observed there at all, and the invariant is otherwise only stated by a CHECK
  * constraint that no unit test ever reaches.
  */
+@Epic("Domain")
+@Feature("Erasure lifecycle")
 class CommentErasureStateTest {
 
     private static final Instant FIRST_DELIVERY = Instant.parse("2026-08-08T10:00:00Z");

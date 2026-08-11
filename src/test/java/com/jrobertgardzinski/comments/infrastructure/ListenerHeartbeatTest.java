@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +48,9 @@ import static org.mockito.Mockito.when;
  * behind it gets empty results, which is exactly the situation the heartbeat is FOR — an idle topic
  * must read as alive. The idle interval is shortened to a second so the wait is a second, not ten.
  */
+@Epic("Infrastructure")
+@Feature("Health probes")
+@Story("Heartbeat wiring")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class}, properties = {
         "comments.kafka-enabled=true",
         "spring.kafka.bootstrap-servers=localhost:1",

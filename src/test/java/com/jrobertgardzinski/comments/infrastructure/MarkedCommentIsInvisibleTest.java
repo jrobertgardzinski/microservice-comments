@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>{@code CommentReadFilterTest} is the static half of the same promise (no query may name the
  * base table); this is the behavioural half.
  */
+@Epic("Saga")
+@Feature("Marked comment invisibility")
+@Story("Public reads")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 @AutoConfigureMockMvc
 class MarkedCommentIsInvisibleTest {

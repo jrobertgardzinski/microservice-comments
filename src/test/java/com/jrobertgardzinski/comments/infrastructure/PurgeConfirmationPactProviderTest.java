@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -27,6 +29,8 @@ import static org.mockito.Mockito.mock;
  * listener — driven by a purge command, its confirmation captured on the way to the outbox — emits
  * that shape. Skipped, not failed, when the consumer repo is not checked out next to this one.
  */
+@Epic("Contract")
+@Feature("Purge confirmation")
 @Provider("microservice-comments")
 @PactFolder("../microservice-offboarding/pacts")
 @EnabledIf(value = "consumerPactsCheckedOut",

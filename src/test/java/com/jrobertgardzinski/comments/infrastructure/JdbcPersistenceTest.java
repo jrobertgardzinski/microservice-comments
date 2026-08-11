@@ -6,6 +6,8 @@ import com.jrobertgardzinski.comments.application.CommentVotes;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * batch tally. Every test works its own comment ids — the H2 instance is shared with the MockMvc
  * and Cucumber suites.
  */
+@Epic("Infrastructure")
+@Feature("JDBC persistence")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 class JdbcPersistenceTest {
 

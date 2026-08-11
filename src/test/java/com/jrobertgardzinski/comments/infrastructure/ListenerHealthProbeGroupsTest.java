@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 // The three lines half 2 needs a context for now come from the test classpath's copy of the
 // management block, not from inline properties here — one copy for the whole suite, in the file that
 // shadows the shipped one. Half 1 below is what pins the shipped file itself.
+@Epic("Infrastructure")
+@Feature("Health probes")
+@Story("Probe group placement")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 class ListenerHealthProbeGroupsTest {
 

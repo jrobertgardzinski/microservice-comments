@@ -3,6 +3,8 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +39,8 @@ import static org.mockito.Mockito.when;
  * below is the round-9 one; what changed is that "a rollback lets nothing out" is now a statement
  * about a transaction manager and a table rather than about the order of two lines of code.
  */
+@Epic("Infrastructure")
+@Feature("Meme-deleted cascade")
 class MemeDeletedCascadeTest {
 
     private final DeleteThread deleteThread = mock(DeleteThread.class);

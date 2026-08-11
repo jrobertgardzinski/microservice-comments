@@ -11,6 +11,8 @@ import au.com.dius.pact.core.model.messaging.Message;
 import au.com.dius.pact.core.model.messaging.MessagePact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +38,8 @@ import static org.mockito.Mockito.when;
  * already sends more (an {@code eventId}, a {@code version}) and may add further fields — tolerant
  * reader, ADR 0004.
  */
+@Epic("Contract")
+@Feature("Meme-deleted announcement")
 @ExtendWith(PactConsumerTestExt.class)
 @PactTestFor(providerName = "microservice-memes", providerType = ProviderType.ASYNCH,
         pactVersion = PactSpecVersion.V3)

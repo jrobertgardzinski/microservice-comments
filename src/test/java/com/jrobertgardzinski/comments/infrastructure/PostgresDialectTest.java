@@ -1,6 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.voting.VoteDirection;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +56,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Skipped where docker is absent (the same pattern as memes' S3ObjectStoreTest); the H2 suite
  * (JdbcPersistenceTest) keeps covering the adapters on every dockerless run.
  */
+@Epic("Infrastructure")
+@Feature("JDBC persistence")
+@Story("PostgreSQL dialect")
 @Testcontainers(disabledWithoutDocker = true)
 class PostgresDialectTest {
 

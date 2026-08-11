@@ -14,6 +14,8 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,6 +39,8 @@ import static org.mockito.Mockito.verify;
  * mark it is ferried and ignored (the mark decides nothing), on the closure it is read, because
  * the rule is applied at erasure time.
  */
+@Epic("Contract")
+@Feature("Purge commands")
 @ExtendWith(PactConsumerTestExt.class)
 @PactTestFor(providerName = "microservice-offboarding", providerType = ProviderType.ASYNCH,
         pactVersion = PactSpecVersion.V3)

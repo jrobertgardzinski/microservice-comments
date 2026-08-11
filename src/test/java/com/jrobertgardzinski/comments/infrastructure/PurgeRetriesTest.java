@@ -8,6 +8,8 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
@@ -48,6 +50,8 @@ import static org.mockito.Mockito.when;
  * <p>The budget under test is milliseconds rather than the production 90 seconds — a test nobody waits
  * out is a test nobody runs — and {@link SagaRetryBudgetTest} pins the real numbers on a steered clock.
  */
+@Epic("Saga")
+@Feature("Purge retries")
 class PurgeRetriesTest {
 
     private static final String LEAVER = "leaver@example.com";

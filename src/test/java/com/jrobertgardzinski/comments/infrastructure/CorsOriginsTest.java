@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * than a note in a README: the failure leaves no evidence on the side that could report it, so the
  * guard has to sit where the configuration is.
  */
+@Epic("Infrastructure")
+@Feature("CORS origins")
 class CorsOriginsTest {
 
     private static final String GALLERY = "http://localhost:8083";

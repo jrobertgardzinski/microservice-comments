@@ -64,3 +64,8 @@ The behaviour contract is the Gherkin specs in [`specs/`](./specs) — one file 
 build; results feed Allure.
 
 In the compose stack: port 8085, own Postgres (`comments-postgres`).
+
+## Documentation
+
+- [`specs/`](./specs) — the executable specifications: Gherkin, one file per use case, run over real HTTP by every build.
+- [`Documentation.md`](./Documentation.md) — the epic → feature → story tree, generated from the test suite's Allure reports; regenerate with `../create-documentation.sh` after `./mvnw clean test`.

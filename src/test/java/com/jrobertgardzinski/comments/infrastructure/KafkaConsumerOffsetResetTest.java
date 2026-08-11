@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * {@code spring.kafka.consumer.auto-offset-reset} through to the consumer, so the key in that file
  * is the key that takes effect.
  */
+@Epic("Infrastructure")
+@Feature("Kafka configuration pins")
+@Story("Consumer offset reset")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class},
         // a sentinel, not the real value: half 2 is about the PATH from the property to the
         // consumer, and a value that could also come from somewhere else would not prove a path

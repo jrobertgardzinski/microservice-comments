@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +47,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * pins the file that goes into the image, in the house's two-halves shape — see
  * {@link ListenerHealthProbeGroupsTest}.
  */
+@Epic("Infrastructure")
+@Feature("Health probes")
+@Story("Probe URLs")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 @AutoConfigureMockMvc
 class ProbeUrlsTest {

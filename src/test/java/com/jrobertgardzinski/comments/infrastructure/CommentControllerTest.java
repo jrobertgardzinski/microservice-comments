@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -21,6 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * meme and votes on the comment (toggle included); anonymous writes are refused; reads are
  * public, with each viewer seeing their own vote.
  */
+@Epic("Infrastructure")
+@Feature("Comments HTTP API")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 @AutoConfigureMockMvc
 // Its OWN database, and the reason is a real red build rather than tidiness. Every test in this

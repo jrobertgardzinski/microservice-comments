@@ -6,6 +6,9 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.outbox.OutboxRepublisher;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +47,9 @@ import static org.mockito.Mockito.when;
  * <p>Sibling of {@code microservice-memes}' test of the same name, on purpose: after this round the two
  * Spring participants make the same promise, so they had better be provable by the same tests.
  */
+@Epic("Saga")
+@Feature("Purge confirmation")
+@Story("Outbox delivery")
 class PurgeConfirmationOutboxTest {
 
     private static final String LEAVER = "leaver@example.com";

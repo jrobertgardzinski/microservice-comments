@@ -8,6 +8,8 @@ import com.jrobertgardzinski.outbox.OutboxTable;
 import com.jrobertgardzinski.outbox.RepublisherSettings;
 import com.jrobertgardzinski.outbox.TransactionalOutbox;
 import com.jrobertgardzinski.outbox.spring.SpringOutbox;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,6 +57,8 @@ import static org.mockito.Mockito.when;
  * a delivered event is not delivered twice, an unconfirmed send is not mistaken for a delivery, and
  * the retention that keeps the table from growing forever does not eat an obligation.
  */
+@Epic("Infrastructure")
+@Feature("Transactional outbox")
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 class CommentsOutboxTest {
 

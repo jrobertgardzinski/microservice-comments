@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +32,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
  * itself is scrutinised: purge commands carry the leaver's e-mail (PII), which must never end up
  * in a log line — not even when the payload is malformed and gets dropped with a WARN.
  */
+@Epic("Saga")
+@Feature("Purge command handling")
 class PurgeCommandsListenerTest {
 
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);

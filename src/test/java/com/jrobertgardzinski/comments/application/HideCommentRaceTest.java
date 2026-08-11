@@ -1,6 +1,9 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * controller already renders as its check-then-act 404 — instead of letting the store's refusal
  * escape as a 500.
  */
+@Epic("Use case")
+@Feature("Hide comment")
+@Story("Race with deletion")
 class HideCommentRaceTest {
 
     private static final Comment COMMENT =
