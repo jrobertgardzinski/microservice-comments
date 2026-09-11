@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.config.PurgeRule;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -93,7 +94,7 @@ class PurgeCommandsListenerTest {
     @DisplayName("an unparseable purge rule is dropped WITHOUT echoing its raw text")
     void invalid_rule_text_is_not_echoed_into_the_log() throws Exception {
         // PurgeRule.parse's message pastes the raw rule text — the WARN must not repeat it
-        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-5\","
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-5\","
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"totally bogus leaver@example.com rule\"}}", null);
 
@@ -112,7 +113,7 @@ class PurgeCommandsListenerTest {
     void phone_number_in_rule_text_is_not_echoed_into_the_log() throws Exception {
         // the old per-character filter kept [0-9], so "+48 601 234 567" leaked as 48?601?234?567;
         // the token whitelist accepts numbers only as KEEP_POPULAR_ANONYMIZED's threshold
-        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-6\","
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-6\","
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"call me +48 601 234 567\"}}", null);
 
@@ -133,7 +134,7 @@ class PurgeCommandsListenerTest {
     void pesel_in_rule_text_is_not_echoed_into_the_log() throws Exception {
         // eleven digits — the old filter passed all of them; ≤4-digit thresholds are only
         // vocabulary straight after KEEP_POPULAR_ANONYMIZED:, so a bare number collapses to ?
-        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-7\","
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-7\","
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"90010112345\"}}", null);
 
@@ -149,7 +150,7 @@ class PurgeCommandsListenerTest {
     void uppercase_email_in_rule_text_is_not_echoed_into_the_log() throws Exception {
         // the old filter kept [A-Z_], so LEAVER@EXAMPLE.COM leaked as LEAVER?EXAMPLE?COM;
         // whole-token whitelisting reduces every non-vocabulary word to ?
-        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-8\","
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-8\","
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"LEAVER@EXAMPLE.COM\"}}", null);
 
@@ -194,7 +195,7 @@ class PurgeCommandsListenerTest {
     @Test
     @DisplayName("the closure erases, and is NOT confirmed — the orchestrator has already decided")
     void the_closure_erases_what_the_mark_reserved() throws Exception {
-        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-11\","
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-11\","
                 + "\"email\":\"leaver@example.com\"}", null);
 
         verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
@@ -236,5 +237,29 @@ class PurgeCommandsListenerTest {
         assertFalse(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("leaver@example.com")),
                 "not even on the failure path does the address reach a log line");
+    }
+
+    @Test
+    @DisplayName("a closure the leaver asked for DELETES, whatever rule the command carries")
+    void a_self_requested_closure_always_deletes() throws Exception {
+        // the leaver is exercising the right to be forgotten and no rule may keep their words —
+        // so the answer is STATED (Delete), not left empty, which would let the default answer
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"SELF\",\"sagaId\":\"s-90\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"ANONYMIZE_AUTHOR\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com",
+                java.util.Optional.of(new PurgeRule.Delete()));
+    }
+
+    @Test
+    @DisplayName("a command with no initiator at all is read as the leaver's own request")
+    void an_absent_initiator_is_read_as_self() throws Exception {
+        listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-91\","
+                + "\"email\":\"leaver@example.com\","
+                + "\"policy\":{\"comments\":\"KEEP_POPULAR_ANONYMIZED:1\"}}", null);
+
+        verify(purgeUserComments).execute("leaver@example.com",
+                java.util.Optional.of(new PurgeRule.Delete()));
     }
 }

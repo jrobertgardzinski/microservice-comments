@@ -98,6 +98,10 @@ class PurgeCommandsContractTest {
                         .stringValue("type", "ERASE_USER_CONTENT")
                         .uuid("sagaId")
                         .stringType("email", "leaver@example.com")
+                        // the basis: only ADMIN licenses the rule below it, and this consumer
+                        // needs the field stated rather than inferred — everything else it reads
+                        // as the leaver's own request and deletes
+                        .stringValue("initiatedBy", "ADMIN")
                         .object("policy")
                         .stringType("comments", "ANONYMIZE_AUTHOR")
                         .closeObject())

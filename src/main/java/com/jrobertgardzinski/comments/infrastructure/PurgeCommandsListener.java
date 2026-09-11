@@ -177,7 +177,35 @@ class PurgeCommandsListener {
         });
     }
 
+    /**
+     * The one word on the wire that licenses conditions. Anything else — a missing field, an empty
+     * one, a word this service has never heard of — is a closure the account's own owner asked
+     * for, which is the same normalisation the orchestrator applies and deliberately not a
+     * symmetrical test: a garbage value must never be the reason somebody's content survives their
+     * own erasure request.
+     */
+    private static final String BY_ADMIN = "ADMIN";
+
+    /**
+     * The rule for THIS service's axis, and the one gate that is not a matter of configuration.
+     *
+     * <p>A closure the OWNER asked for resolves to {@link PurgeRule.Delete}, STATED rather than
+     * left absent: absent means "decide for me", which lets the deployment default answer, and a
+     * deployment dialled in to keep anonymised comments would then keep the words of somebody who
+     * asked to be forgotten. The right to erasure has no exception for content worth keeping.
+     *
+     * <p>An administrator's closure is an ordinary business decision, so its rule is read from the
+     * command as it always was.
+     */
     private Optional<PurgeRule> requestedRule(JsonNode command) {
+        if (!BY_ADMIN.equals(command.path("initiatedBy").asText())) {
+            if (!command.path("policy").path("comments").isMissingNode()) {
+                // a producer that states conditions on a self-closure is broken, not permissive
+                LOG.warn("a self-requested closure arrived carrying a comments purge rule; ignoring "
+                        + "it and deleting — conditions are an administrator's to state");
+            }
+            return Optional.of(new PurgeRule.Delete());
+        }
         JsonNode rule = command.path("policy").path("comments");
         if (rule.isMissingNode()) {
             return Optional.empty();
