@@ -79,6 +79,23 @@ class CommentsConfig {
     }
 
     @Bean
+    com.jrobertgardzinski.comments.config.ErasureTolerance erasureTolerance(
+            @Value("${comments.erasure.stuck-after-seconds:1800}") long stuckAfterSeconds) {
+        return new com.jrobertgardzinski.comments.config.ErasureTolerance(
+                java.time.Duration.ofSeconds(stuckAfterSeconds));
+    }
+
+    @Bean
+    com.jrobertgardzinski.comments.application.WatchErasureBacklog watchErasureBacklog(
+            CommentErasure erasure,
+            com.jrobertgardzinski.comments.config.ErasureTolerance tolerance,
+            com.jrobertgardzinski.comments.application.Observations observations,
+            java.time.Clock clock) {
+        return new com.jrobertgardzinski.comments.application.WatchErasureBacklog(
+                erasure, tolerance, observations, clock);
+    }
+
+    @Bean
     PurgeRule defaultCommentsPurgeRule(@Value("${comments.purge.comments:ANONYMIZE_AUTHOR}") String rule) {
         return PurgeRule.parse(rule);
     }

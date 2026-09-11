@@ -70,7 +70,8 @@ class PurgeRetriesTest {
     private final DefaultErrorHandler errorHandler = SagaParticipantConfig.errorHandler(
             new SagaRetryBudget(Duration.ofMillis(400), Duration.ofMillis(20),
                     Duration.ofMillis(50), System::nanoTime),
-            meters);
+            // the real adapter, so the assertion still reads the metric an operator alerts on
+            new MicrometerObservations(meters));
 
     private final MessageListenerContainer container = mock(MessageListenerContainer.class);
     private final Consumer<?, ?> consumer = mock(Consumer.class);

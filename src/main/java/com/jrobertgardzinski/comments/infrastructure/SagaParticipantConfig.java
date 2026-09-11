@@ -1,8 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.Observations;
+import com.jrobertgardzinski.comments.domain.Observation;
 import com.jrobertgardzinski.outbox.spring.SpringOutbox;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
@@ -76,8 +77,8 @@ class SagaParticipantConfig {
      */
     @Bean
     @ConditionalOnProperty(name = "comments.kafka-enabled", havingValue = "true")
-    CommonErrorHandler sagaRecordErrorHandler(MeterRegistry meters) {
-        return errorHandler(SagaRetryBudget.forSagaRecords(), meters);
+    CommonErrorHandler sagaRecordErrorHandler(Observations observations) {
+        return errorHandler(SagaRetryBudget.forSagaRecords(), observations);
     }
 
     /**
@@ -98,8 +99,8 @@ class SagaParticipantConfig {
      * shape the listener parses. (This service's listener already drops malformed JSON itself, with a
      * PII-free WARN, before any of this is reached.)
      */
-    static DefaultErrorHandler errorHandler(SagaRetryBudget budget, MeterRegistry meters) {
-        DefaultErrorHandler handler = new DefaultErrorHandler(droppedAfterBudget(meters), budget);
+    static DefaultErrorHandler errorHandler(SagaRetryBudget budget, Observations observations) {
+        DefaultErrorHandler handler = new DefaultErrorHandler(droppedAfterBudget(observations), budget);
         handler.setResetStateOnExceptionChange(false);
         handler.setRetryListeners(retryLogging());
         return handler;
@@ -111,13 +112,17 @@ class SagaParticipantConfig {
      * milliseconds and with nothing but a framework ERROR line, which is why the audit found the
      * contract broken ("the saga does not lose a purge") and no metric to prove it ever was.
      *
-     * <p>{@code comments_kafka_records_dropped_total{topic="content-commands"}} is the alert an operator
+     * <p>What it counts as is not decided here any more: the recoverer STATES the fact — one saga
+     * command this service will never carry out — and {@link MicrometerObservations} decides such a
+     * fact is spelled {@code comments_kafka_records_dropped_total{topic="content-commands"}}. A
+     * framework callback is where a technical event becomes a sentence about the business, which is
+     * exactly what an adapter is for. The old note, still true: it is the alert an operator
      * wants: one increment means one account deletion that this service did not finish, and the saga
      * is about to compensate.
      */
-    private static ConsumerRecordRecoverer droppedAfterBudget(MeterRegistry meters) {
+    private static ConsumerRecordRecoverer droppedAfterBudget(Observations observations) {
         return (record, failure) -> {
-            meters.counter("comments.kafka.records.dropped", "topic", record.topic()).increment();
+            observations.record(new Observation.SagaCommandDropped(record.topic()));
             withCidOf(record, () -> LOG.error("giving up on {}-{}@{} after the {}s retry budget:"
                             + " the record is DROPPED and its offset committed ({}). If this was a"
                             + " purge command, the saga will time out and compensate",
