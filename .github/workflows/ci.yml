@@ -108,6 +108,7 @@ jobs:
             SPRING_DATASOURCE_USERNAME=sa SPRING_DATASOURCE_PASSWORD= \
             COMMENTS_KAFKA_ENABLED=true SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:1 \
             SERVER_PORT=18085 MANAGEMENT_SERVER_PORT=19085 \
+            SPRING_PROFILES_ACTIVE=dev \
             java -jar target/microservice-comments-1.0.0-SNAPSHOT.jar > /tmp/boot-smoke.log 2>&1 &
           pid=$!
           for attempt in $(seq 1 60); do
