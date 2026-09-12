@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.Observations;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.domain.Observation;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -22,11 +22,7 @@ class SilentObservations {
 
     @Bean
     @ConditionalOnMissingBean(Observations.class)
-    Observations silence() {
-        return new Observations() {
-            @Override
-            public void record(Observation observation) {
-            }
-        };
+    Observations<Observation> silence() {
+        return Observations.silent();
     }
 }

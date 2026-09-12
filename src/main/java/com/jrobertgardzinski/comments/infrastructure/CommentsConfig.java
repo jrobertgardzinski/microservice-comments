@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.AddComment;
 import com.jrobertgardzinski.comments.application.CommentModeration;
 import com.jrobertgardzinski.comments.application.CommentRepository;
@@ -89,7 +90,7 @@ class CommentsConfig {
     com.jrobertgardzinski.comments.application.WatchErasureBacklog watchErasureBacklog(
             CommentErasure erasure,
             com.jrobertgardzinski.comments.config.ErasureTolerance tolerance,
-            com.jrobertgardzinski.comments.application.Observations observations,
+            com.jrobertgardzinski.observation.Observations<com.jrobertgardzinski.comments.domain.Observation> observations,
             java.time.Clock clock) {
         return new com.jrobertgardzinski.comments.application.WatchErasureBacklog(
                 erasure, tolerance, observations, clock);

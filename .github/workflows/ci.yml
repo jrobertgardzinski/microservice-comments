@@ -27,6 +27,10 @@ jobs:
           path: voting
       - uses: actions/checkout@v7
         with:
+          repository: jrobertgardzinski/observation
+          path: observation
+      - uses: actions/checkout@v7
+        with:
           repository: jrobertgardzinski/offline-jwt
           path: offline-jwt
       - uses: actions/checkout@v7
@@ -60,6 +64,7 @@ jobs:
       - name: Install the shared libraries
         run: |
           mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f observation/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests

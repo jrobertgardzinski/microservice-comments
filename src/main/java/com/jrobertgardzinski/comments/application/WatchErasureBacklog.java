@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.config.ErasureTolerance;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.Observation;
@@ -29,11 +30,11 @@ public class WatchErasureBacklog {
 
     private final CommentErasure erasure;
     private final ErasureTolerance tolerance;
-    private final Observations observations;
+    private final Observations<Observation> observations;
     private final Clock clock;
 
     public WatchErasureBacklog(CommentErasure erasure, ErasureTolerance tolerance,
-                               Observations observations, Clock clock) {
+                               Observations<Observation> observations, Clock clock) {
         this.erasure = erasure;
         this.tolerance = tolerance;
         this.observations = observations;

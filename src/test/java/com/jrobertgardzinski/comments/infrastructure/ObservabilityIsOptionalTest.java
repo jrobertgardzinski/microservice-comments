@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.CommentErasure;
-import com.jrobertgardzinski.comments.application.Observations;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.WatchErasureBacklog;
 import com.jrobertgardzinski.comments.config.ErasureTolerance;
 import com.jrobertgardzinski.comments.domain.Comment;
@@ -76,7 +76,7 @@ class ObservabilityIsOptionalTest {
     @DisplayName("with nothing watching, the work is unchanged — the answer is the same")
     void the_service_works_unwatched() {
         Instant markedAt = Instant.parse("2026-08-08T10:00:00Z");
-        Observations silence = observation -> { };
+        Observations<Observation> silence = observation -> { };
 
         Observation.ErasureBacklog said = new WatchErasureBacklog(holding(markedAt),
                 new ErasureTolerance(Duration.ofMinutes(30)), silence,

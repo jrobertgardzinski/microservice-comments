@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.Observations;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.domain.Observation;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Component
 @ConditionalOnProperty(name = "comments.observability-enabled", havingValue = "true", matchIfMissing = true)
-class MicrometerObservations implements Observations {
+class MicrometerObservations implements Observations<Observation> {
 
     private final AtomicLong erasureBacklog = new AtomicLong();
     private final MeterRegistry meters;
