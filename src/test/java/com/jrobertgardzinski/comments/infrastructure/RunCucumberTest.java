@@ -23,6 +23,9 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
 @SelectClasspathResource("delete-comment.feature")
 @SelectClasspathResource("delete-thread.feature")
 @SelectClasspathResource("hide-comment.feature")
+// the promise this service makes about a leaver's words — driven through the use cases,
+// because the purge arrives over the broker and the wire is the pact tests' business
+@SelectClasspathResource("account-erasure.feature")
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.jrobertgardzinski.comments.infrastructure.cucumber")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME,
         value = "pretty, io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm")
