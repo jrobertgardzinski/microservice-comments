@@ -29,6 +29,11 @@ jobs:
         with:
           repository: jrobertgardzinski/observation
           path: observation
+      # the closure vocabulary shared with identity and the orchestrator
+      - uses: actions/checkout@v7
+        with:
+          repository: jrobertgardzinski/account-closure
+          path: account-closure
       - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/offline-jwt
@@ -65,6 +70,7 @@ jobs:
         run: |
           mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f observation/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f account-closure/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests

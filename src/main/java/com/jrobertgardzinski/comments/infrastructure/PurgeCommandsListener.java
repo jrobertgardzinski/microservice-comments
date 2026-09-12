@@ -6,6 +6,8 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.closure.ClosureInitiator;
+import com.jrobertgardzinski.closure.ClosureMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -69,11 +71,11 @@ class PurgeCommandsListener {
     private static final Logger LOG = LoggerFactory.getLogger(PurgeCommandsListener.class);
 
     /** The reversible mark; its confirmation is what the orchestrator's quorum counts. */
-    static final String MARK = "PURGE_USER_CONTENT";
+    static final String MARK = ClosureMessages.PURGE_USER_CONTENT;
     /** The closure: the orchestrator says the case is settled, so the rule may be applied. */
-    static final String ERASE = "ERASE_USER_CONTENT";
+    static final String ERASE = ClosureMessages.ERASE_USER_CONTENT;
     /** The compensation: the marks come off and the comments are back in their threads. */
-    static final String RESTORE = "RESTORE_USER_CONTENT";
+    static final String RESTORE = ClosureMessages.RESTORE_USER_CONTENT;
 
     private final MarkUserCommentsForErasure markForErasure;
     private final RestoreUserComments restoreUserComments;
@@ -178,15 +180,6 @@ class PurgeCommandsListener {
     }
 
     /**
-     * The one word on the wire that licenses conditions. Anything else — a missing field, an empty
-     * one, a word this service has never heard of — is a closure the account's own owner asked
-     * for, which is the same normalisation the orchestrator applies and deliberately not a
-     * symmetrical test: a garbage value must never be the reason somebody's content survives their
-     * own erasure request.
-     */
-    private static final String BY_ADMIN = "ADMIN";
-
-    /**
      * The rule for THIS service's axis, and the one gate that is not a matter of configuration.
      *
      * <p>A closure the OWNER asked for resolves to {@link PurgeRule.Delete}, STATED rather than
@@ -198,7 +191,10 @@ class PurgeCommandsListener {
      * command as it always was.
      */
     private Optional<PurgeRule> requestedRule(JsonNode command) {
-        if (!BY_ADMIN.equals(command.path("initiatedBy").asText())) {
+        // ClosureInitiator, not a constant of ours: the one word that licenses conditions belongs
+        // to the agreement, and its reading is deliberately not symmetrical — a missing field, an
+        // empty one or a word nobody recognises is a closure the OWNER asked for
+        if (!ClosureInitiator.allowsConditions(command.path(ClosureMessages.Field.INITIATED_BY).asText())) {
             if (!command.path("policy").path("comments").isMissingNode()) {
                 // a producer that states conditions on a self-closure is broken, not permissive
                 LOG.warn("a self-requested closure arrived carrying a comments purge rule; ignoring "
