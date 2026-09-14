@@ -25,7 +25,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <allure.version>2.35.5</allure.version>
         <cucumber.version>7.34.8</cucumber.version>
-        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <compiler-plugin.version>3.16.0</compiler-plugin.version>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
     </properties>
 
