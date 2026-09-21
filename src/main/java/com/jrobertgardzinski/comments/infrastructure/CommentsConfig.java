@@ -132,6 +132,17 @@ class CommentsConfig {
         return new RestoreUserComments(erasure);
     }
 
+    /**
+     * No transactional decorator here either, and for the listener's reason rather than the saga's:
+     * {@code SecurityEventsListener} opens one transaction per record, so the two tables the re-key
+     * touches move together or not at all.
+     */
+    @Bean
+    com.jrobertgardzinski.comments.application.RekeyUserComments rekeyUserComments(
+            com.jrobertgardzinski.comments.application.UserCommentsRekey rekey) {
+        return new com.jrobertgardzinski.comments.application.RekeyUserComments(rekey);
+    }
+
     @Bean
     DeleteThread deleteThread(CommentRepository commentRepository, CommentVotes commentVotes,
                               PlatformTransactionManager transactionManager) {

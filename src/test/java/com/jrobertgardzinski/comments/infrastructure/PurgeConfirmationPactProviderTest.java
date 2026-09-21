@@ -9,6 +9,7 @@ import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -64,8 +65,8 @@ class PurgeConfirmationPactProviderTest {
         CapturedConfirmations confirmations = new CapturedConfirmations();
         PurgeCommandsListener listener = new PurgeCommandsListener(
                 mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
-                mock(PurgeUserComments.class), confirmations, new ObjectMapper(),
-                NoTransactions.template());
+                mock(PurgeUserComments.class), confirmations, Observations.silent(),
+                new ObjectMapper(), NoTransactions.template());
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\","
                 + "\"sagaId\":\"7d9f9e2a-1f0a-4f6e-9a1b-2c3d4e5f6a7b\","
                 + "\"email\":\"leaver@example.com\"}", null);

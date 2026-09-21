@@ -40,4 +40,18 @@ public sealed interface Observation {
      */
     record SagaCommandDropped(String topic) implements Observation {
     }
+
+    /**
+     * A deletion saga reserved NOTHING for the person it named, and this service confirmed that it
+     * had nothing to reserve. Harmless when the person really never commented — and the whole of
+     * F-014 when they did, under the address they used to have: the rename travels on another topic
+     * and can arrive after the purge, so this is the one moment at which "I hold nothing of theirs"
+     * and "I have not caught up with their new address" look identical from the inside.
+     *
+     * <p>Stated because nothing else can state it. A broker dashboard sees a command consumed and a
+     * confirmation produced; only this service knows the confirmation was empty, and the shape of
+     * the defect is that a rise in this count accompanies deletions that leave words behind.
+     */
+    record PurgeReservedNothing() implements Observation {
+    }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.outbox.OutboxRepublisher;
 import io.qameta.allure.Epic;
@@ -69,7 +70,7 @@ class PurgeConfirmationOutboxTest {
 
     private final PurgeCommandsListener listener = new PurgeCommandsListener(
             markForErasure, mock(RestoreUserComments.class), purgeUserComments,
-            new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
+            new PurgeConfirmations(db.outbox(), mapper), Observations.silent(), mapper, db.tx());
 
     private OutboxRepublisher republisher() {
         // exactly the republisher CommentsOutboxConfig wires, on this fixture's outbox

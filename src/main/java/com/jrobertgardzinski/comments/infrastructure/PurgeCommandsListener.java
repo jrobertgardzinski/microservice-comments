@@ -6,6 +6,8 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.comments.domain.Observation;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.closure.ClosureInitiator;
 import com.jrobertgardzinski.closure.ClosureMessages;
 import org.slf4j.Logger;
@@ -81,17 +83,20 @@ class PurgeCommandsListener {
     private final RestoreUserComments restoreUserComments;
     private final PurgeUserComments purgeUserComments;
     private final PurgeConfirmations confirmations;
+    private final Observations<Observation> observations;
     private final ObjectMapper mapper;
     private final TransactionTemplate tx;
 
     PurgeCommandsListener(MarkUserCommentsForErasure markForErasure,
                           RestoreUserComments restoreUserComments,
                           PurgeUserComments purgeUserComments, PurgeConfirmations confirmations,
+                          Observations<Observation> observations,
                           ObjectMapper mapper, TransactionTemplate tx) {
         this.markForErasure = markForErasure;
         this.restoreUserComments = restoreUserComments;
         this.purgeUserComments = purgeUserComments;
         this.confirmations = confirmations;
+        this.observations = observations;
         this.mapper = mapper;
         this.tx = tx;
     }
@@ -140,9 +145,11 @@ class PurgeCommandsListener {
         }
         switch (type) {
             case MARK -> {
-                markAndConfirm(sagaId, email);
-                // the saga id identifies the run in logs; the e-mail is PII and stays out of INFO
-                LOG.info("marked one leaver's comments for erasure (saga {})", sagaId);
+                int reserved = markAndConfirm(sagaId, email);
+                // the saga id identifies the run in logs; the e-mail is PII and stays out of INFO.
+                // The count is not PII and is the difference between "it worked" and "it found
+                // nobody"
+                LOG.info("marked {} of one leaver's comments for erasure (saga {})", reserved, sagaId);
             }
             case ERASE -> {
                 // the rule is parsed OUTSIDE the transaction: it is pure, and its WARN about an
@@ -171,12 +178,33 @@ class PurgeCommandsListener {
      * can see. The outbox library parks the actual send on the commit, so nothing is published
      * before the mark is real. The topic is the cascade's own ({@link KafkaCommentEvents#TOPIC}, one
      * constant for both producers); consumers tell the two conversations apart by {@code type}.
+     *
+     * <p><strong>And it says how much it reserved.</strong> The confirmation used to go out
+     * unconditionally, so a mark that matched nothing was reported in exactly the same words as one
+     * that took forty comments out of their threads — which is how a leaver who had changed their
+     * address got a completed deletion with every word still public (F-014). The count travels with
+     * the confirmation and a zero raises {@link Observation.PurgeReservedNothing} and a WARN, because
+     * this is the one thing the service cannot resolve on its own: "I hold nothing of theirs" and
+     * "their rows are under the address they had yesterday and the rename has not reached me yet" are
+     * the same observation from in here, and the address on the command is all there is to go on. The
+     * rename normally arrives long before any deletion ({@link SecurityEventsListener}); when it
+     * loses that race, this is what makes the silence countable instead of invisible.
+     *
+     * <p>Returns the count so the caller can log it — by saga id, never by address.
      */
-    private void markAndConfirm(String sagaId, String email) {
-        tx.executeWithoutResult(status -> {
-            markForErasure.execute(email);
-            confirmations.confirm(sagaId, email);
+    private int markAndConfirm(String sagaId, String email) {
+        int reserved = tx.execute(status -> {
+            int marked = markForErasure.execute(email);
+            confirmations.confirm(sagaId, email, marked);
+            return marked;
         });
+        if (reserved == 0) {
+            observations.record(new Observation.PurgeReservedNothing());
+            LOG.warn("confirmed a purge that reserved NOTHING (saga {}): either this member never"
+                    + " commented, or their comments are still keyed by an address they have"
+                    + " changed and the rename has not been consumed yet", sagaId);
+        }
+        return reserved;
     }
 
     /**

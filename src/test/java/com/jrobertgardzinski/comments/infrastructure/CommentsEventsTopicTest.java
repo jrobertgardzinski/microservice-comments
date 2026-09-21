@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -69,7 +70,8 @@ class CommentsEventsTopicTest {
 
     private final PurgeCommandsListener saga = new PurgeCommandsListener(
             mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
-            purgeUserComments, new PurgeConfirmations(db.outbox(), mapper), mapper, db.tx());
+            purgeUserComments, new PurgeConfirmations(db.outbox(), mapper), Observations.silent(),
+            mapper, db.tx());
     private final MemesEventsListener cascade = new MemesEventsListener(deleteThread,
             new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());
 

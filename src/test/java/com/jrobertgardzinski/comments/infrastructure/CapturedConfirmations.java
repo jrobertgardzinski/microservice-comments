@@ -23,8 +23,8 @@ class CapturedConfirmations extends PurgeConfirmations {
     }
 
     @Override
-    void confirm(String sagaId, String leaver) {
-        captured = confirmationOf(sagaId, leaver);
+    void confirm(String sagaId, String leaver, int reserved) {
+        captured = confirmationOf(sagaId, leaver, reserved);
     }
 
     /** The confirmation the listener announced, or {@code null} if it announced none. */

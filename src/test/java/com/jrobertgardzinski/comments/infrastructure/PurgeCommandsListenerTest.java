@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import com.jrobertgardzinski.comments.domain.Observation;
+import com.jrobertgardzinski.observation.Observations;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +28,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * The listener's hygiene around broken commands: a PURGE_USER_CONTENT without an e-mail names
@@ -41,8 +45,10 @@ class PurgeCommandsListenerTest {
     private final RestoreUserComments restoreUserComments = mock(RestoreUserComments.class);
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
     private final PurgeConfirmations confirmations = mock(PurgeConfirmations.class);
+    private final java.util.List<Observation> observed = new java.util.ArrayList<>();
+    private final Observations<Observation> observations = observed::add;
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
-            restoreUserComments, purgeUserComments, confirmations, new ObjectMapper(),
+            restoreUserComments, purgeUserComments, confirmations, observations, new ObjectMapper(),
             NoTransactions.template());
 
     private final ListAppender<ILoggingEvent> logLines = new ListAppender<>();
@@ -180,6 +186,8 @@ class PurgeCommandsListenerTest {
     @Test
     @DisplayName("a completed mark confirms the SAME saga it was commanded for — and erases nothing")
     void a_completed_purge_confirms_its_own_saga() throws Exception {
+        when(markForErasure.execute("leaver@example.com")).thenReturn(3);
+
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-9\","
                 + "\"email\":\"leaver@example.com\"}", null);
 
@@ -187,9 +195,32 @@ class PurgeCommandsListenerTest {
         // the mark first, the promise to report it second, both inside one transaction: a
         // confirmation announced before the mark would be a lie the outbox then made durable
         order.verify(markForErasure).execute("leaver@example.com");
-        order.verify(confirmations).confirm("s-9", "leaver@example.com");
+        // and the confirmation carries what the mark actually reserved, not just that it ran
+        order.verify(confirmations).confirm("s-9", "leaver@example.com", 3);
         // and the point of the two-phase design: the reversible command destroys nothing
         verifyNoInteractions(purgeUserComments);
+        assertTrue(observed.isEmpty(), "a mark with something to reserve raises no alarm: " + observed);
+    }
+
+    @Test
+    @DisplayName("a mark that reserved NOTHING is confirmed as nothing — counted and warned, never as a purge")
+    void a_mark_that_found_nobody_confirms_a_zero() throws Exception {
+        // the mock's default: the address on the command matched no comment. From in here that is
+        // either a member who never commented or F-014 — a member whose comments are still keyed by
+        // the address they used to have — and this service cannot tell the two apart, so it stops
+        // claiming and starts reporting
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-14\","
+                + "\"email\":\"leaver@example.com\"}", null);
+
+        verify(confirmations).confirm("s-14", "leaver@example.com", 0);
+        assertEquals(java.util.List.of(new Observation.PurgeReservedNothing()), observed,
+                "an empty confirmation is the one thing only this service can count");
+        assertTrue(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("reserved NOTHING")),
+                "and it says so where an operator reading the deletion's trace will see it");
+        assertFalse(logLines.list.stream().anyMatch(event ->
+                        event.getFormattedMessage().contains("leaver@example.com")),
+                "not even the alarm names the leaver");
     }
 
     @Test

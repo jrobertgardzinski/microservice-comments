@@ -60,16 +60,31 @@ class PurgeConfirmations {
     }
 
     /** Announce the confirmation in the caller's transaction — see the class javadoc. */
-    void confirm(String sagaId, String leaver) {
-        outbox.announce(confirmationOf(sagaId, leaver));
+    void confirm(String sagaId, String leaver, int reserved) {
+        outbox.announce(confirmationOf(sagaId, leaver, reserved));
     }
 
     /**
      * The confirmation as it will be stored AND as it will be sent — the row is the record.
      *
-     * <p>The envelope is unchanged from the bare-send days on purpose: {@code type}, {@code sagaId},
+     * <p>The envelope is the bare-send days' one plus a single field: {@code type}, {@code sagaId},
      * {@code email}, {@code version} 1 (workspace ADR 0004 — fields are only ever added within a
-     * version), and the orchestrator's committed pact pins exactly these. In particular the event id
+     * version) — and {@code reserved}, the number of comments the mark actually took out of their
+     * threads. Adding it is what that rule is for, and the orchestrator's committed pact pins only
+     * what it reads, so nothing downstream moves.
+     *
+     * <p><strong>Why the count is on the wire at all.</strong> The confirmation used to be an
+     * assertion — "this leaver's comments are gone" — sent whatever the mark found, and for a leaver
+     * whose comments sat under an address they no longer used, that assertion was false and the saga
+     * completed on it. This service cannot tell that case from a member who simply never commented:
+     * both are "no rows under this address", and the address is all the command carries. So it stops
+     * asserting and starts REPORTING. {@code reserved: 0} is a confirmation that claims nothing,
+     * readable as such by the orchestrator, by an operator reading the topic, and by the counter the
+     * listener raises beside it. What it deliberately does not do is withhold the confirmation: a
+     * member with no comments is the common case, and failing their deletion to catch a rarer one
+     * would be trading a defect for a worse one.
+     *
+     * <p>In particular the event id
      * is NOT pasted into the payload, unlike the cascade's COMMENTS_DELETED: a consumer needs the id
      * to recognise a redelivered duplicate, and for confirmations there is nothing to recognise —
      * recording a
@@ -85,12 +100,13 @@ class PurgeConfirmations {
      * <p>Package-private and free of the outbox so the contract tests can build the real payload
      * without a database — the shape is what they verify, and a table is not part of the shape.
      */
-    OutboxEvent confirmationOf(String sagaId, String leaver) {
+    OutboxEvent confirmationOf(String sagaId, String leaver, int reserved) {
         String payload;
         try {
             var confirmation = mapper.createObjectNode()
                     .put("type", USER_CONTENT_PURGED)
                     .put("email", leaver)
+                    .put("reserved", reserved)
                     .put("version", 1);
             // A BLANK sagaId is worse than an absent one. The orchestrator drops a confirmation
             // whose sagaId is present but unparseable — a deliberate poison-pill rule — while one

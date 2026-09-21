@@ -12,6 +12,7 @@ import au.com.dius.pact.core.model.messaging.MessagePact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.config.PurgeRule;
 import io.qameta.allure.Epic;
@@ -50,7 +51,7 @@ class PurgeCommandsContractTest {
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
             mock(RestoreUserComments.class), purgeUserComments, new CapturedConfirmations(),
-            new ObjectMapper(), NoTransactions.template());
+            Observations.silent(), new ObjectMapper(), NoTransactions.template());
 
     @Pact(consumer = "microservice-comments")
     MessagePact purgeCommand(MessagePactBuilder builder) {
@@ -131,7 +132,8 @@ class PurgeCommandsContractTest {
     void restoresOnTheCompensation(List<Message> messages) throws Exception {
         RestoreUserComments restore = mock(RestoreUserComments.class);
         new PurgeCommandsListener(markForErasure, restore, purgeUserComments,
-                new CapturedConfirmations(), new ObjectMapper(), NoTransactions.template())
+                new CapturedConfirmations(), Observations.silent(), new ObjectMapper(),
+                NoTransactions.template())
                 .receive(messages.get(0).contentsAsString(), null);
         verify(restore).execute("leaver@example.com");
     }

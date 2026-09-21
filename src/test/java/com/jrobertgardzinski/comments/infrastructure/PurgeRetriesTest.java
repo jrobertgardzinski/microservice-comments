@@ -6,6 +6,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.qameta.allure.Epic;
@@ -63,8 +64,8 @@ class PurgeRetriesTest {
     private final PurgeConfirmations confirmations = mock(PurgeConfirmations.class);
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
-            mock(RestoreUserComments.class), purgeUserComments, confirmations, new ObjectMapper(),
-            NoTransactions.template());
+            mock(RestoreUserComments.class), purgeUserComments, confirmations,
+            Observations.silent(), new ObjectMapper(), NoTransactions.template());
 
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private final DefaultErrorHandler errorHandler = SagaParticipantConfig.errorHandler(
@@ -134,7 +135,7 @@ class PurgeRetriesTest {
         assertFalse(deliverOnce(), "and the second one succeeds, so nothing is recovered/dropped");
 
         assertEquals(2, attempts.get(), "the mark ran again on redelivery — it is idempotent by design");
-        Mockito.verify(confirmations).confirm(SAGA, LEAVER);
+        Mockito.verify(confirmations).confirm(SAGA, LEAVER, 0);
         assertEquals(0, dropped(), "nothing was dropped, so the counter that alerts stays at zero");
     }
 
@@ -157,7 +158,7 @@ class PurgeRetriesTest {
                 + " with extra steps, was: " + deliveries);
         assertTrue(spent.compareTo(Duration.ofSeconds(30)) < 0,
                 "and it ended on the budget's deadline, not on the loop's guard: " + spent);
-        Mockito.verify(confirmations, Mockito.never()).confirm(SAGA, LEAVER);
+        Mockito.verify(confirmations, Mockito.never()).confirm(SAGA, LEAVER, 0);
     }
 
     @Test

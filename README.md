@@ -37,6 +37,16 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
   leaver's comments under this service's axis of the policy (`DELETE` | `ANONYMIZE_AUTHOR` |
   `KEEP_POPULAR_ANONYMIZED:<n>`; wizard override wins over the `PURGE_COMMENTS_POLICY` default);
   the confirmation goes back on `comments-events`. Votes the leaver cast are always retracted.
+- **microservice-security, the other direction** — a member's address can move, and their words move
+  with it. Everything here is keyed by the address the token carried at the time (`comments.author`,
+  `comment_votes.voter`), so when security confirms a change of address it announces `EMAIL_CHANGED`
+  on `security-events` and this service re-keys those rows (`SecurityEventsListener` →
+  `RekeyUserComments`). Without it a member was a stranger to their own thread (`own:false`, a
+  `DELETE` of their own comment 403) and their deletion marked nothing while confirming an erasure,
+  leaving the words to whoever registered the freed address next. The two topics are independent, so
+  a deletion can still overtake a rename; that is why the confirmation carries `reserved` — how many
+  comments the mark actually took out of their threads — and why a zero raises
+  `comments_saga_purge_reserved_nothing_total` instead of reading as a successful erasure.
 
 ## Contract
 
