@@ -53,7 +53,7 @@ class HideCommentRaceTest {
     @DisplayName("a comment deleted mid-hide reads as 'no such comment', not as an error")
     void deleted_mid_hide_is_no_such_comment() {
         HideComment.Status status = new HideComment(repository, commentGoneMidHide)
-                .execute("c1", true, true);
+                .execute("m1", "c1", true, true);
 
         assertEquals(HideComment.Status.NO_SUCH_COMMENT, status,
                 "the FK refusal must collapse into the same answer as a failed existence check");

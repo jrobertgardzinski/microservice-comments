@@ -56,6 +56,14 @@ class FakeCommentErasure implements CommentErasure {
     }
 
     @Override
+    public List<Comment> allUnder(String memeId) {
+        return comments.stream()
+                .filter(comment -> comment.memeId().equals(memeId))
+                .map(this::withMark)
+                .toList();
+    }
+
+    @Override
     public List<Comment> pendingSince(Instant cutoff) {
         return comments.stream()
                 .filter(comment -> marks.containsKey(comment.id()))

@@ -63,6 +63,17 @@ class JdbcCommentErasure implements CommentErasure {
     }
 
     @Override
+    public List<Comment> allUnder(String memeId) {
+        // no status in the WHERE clause, and that is the whole point: the thread delete below it
+        // destroys the base table's rows, marked ones included, so the cascade has to read them the
+        // same way — otherwise it announces less than it took
+        return jdbc.sql("SELECT id, meme_id, author, content, status, marked_for_erasure_at "
+                        + "FROM comments WHERE meme_id = ? ORDER BY created_at")
+                .param(memeId)
+                .query(JdbcCommentErasure::toComment).list();
+    }
+
+    @Override
     public List<Comment> pendingSince(Instant cutoff) {
         // the reaper's query in full — a status and an instant, served by
         // idx_comments_pending_erasure. Oldest first, because that is what an operator reading the

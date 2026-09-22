@@ -6,8 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Set;
 
@@ -33,7 +35,12 @@ class RequireSignInFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith("/memes")) {
+        // the gate has to read the path the DISPATCHER will read. getRequestURI() is the RAW uri,
+        // while @RequestMapping("/memes/{memeId}/comments") is matched against the DECODED segments
+        // of the request path — so on "/%6Demes/..." the two disagree, the raw prefix test says
+        // "not ours", and the write handler is dispatched with nobody signed in. Decoding first
+        // makes the gate see what the router sees.
+        if (!UriUtils.decode(request.getRequestURI(), StandardCharsets.UTF_8).startsWith("/memes")) {
             chain.doFilter(request, response);
             return;
         }

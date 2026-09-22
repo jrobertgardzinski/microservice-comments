@@ -115,6 +115,10 @@ class ObservabilityIsOptionalTest {
             public void store(Comment state) {
             }
 
+            public List<Comment> allUnder(String memeId) {
+                return List.of();
+            }
+
             public List<Comment> pendingSince(Instant cutoff) {
                 return List.of(marked);
             }

@@ -146,14 +146,15 @@ class TransactionalDecoratorsTest {
     @DisplayName("DeleteComment: a crash on the final delete rolls the vote purge back too")
     void delete_comment_is_atomic() {
         String commentId = UUID.randomUUID().toString();
-        repository.save(new Comment(commentId, UUID.randomUUID().toString(),
+        String memeId = UUID.randomUUID().toString();
+        repository.save(new Comment(commentId, memeId,
                 "author@example.com", "doomed, but atomically"));
         votes.cast(commentId, "fan@example.com", VoteDirection.UP);
         votes.cast(commentId, "hater@example.com", VoteDirection.DOWN);
 
         FailingPorts.failDeleteOf.add(commentId);
         assertThrows(DataAccessResourceFailureException.class,
-                () -> deleteComment.execute(commentId, "author@example.com", false));
+                () -> deleteComment.execute(memeId, commentId, "author@example.com", false));
 
         // the vote purge ran first and must have been rolled back with the failed delete —
         // without the decorator the votes would be gone while the comment survived

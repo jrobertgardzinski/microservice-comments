@@ -140,16 +140,16 @@ class IdempotentCommandsTest {
         Map<String, Consumer<World>> c = new LinkedHashMap<>();
         c.put("delete a comment (author's own)",
                 w -> new DeleteComment(w.repository, w.commentVotes)
-                        .execute("c1", "alice@example.com", false));
+                        .execute("m1", "c1", "alice@example.com", false));
         c.put("delete a comment that is not there",
                 w -> new DeleteComment(w.repository, w.commentVotes)
-                        .execute("ghost", "alice@example.com", false));
+                        .execute("m1", "ghost", "alice@example.com", false));
         c.put("delete a whole thread",
-                w -> new DeleteThread(w.repository, w.commentVotes).execute("m1"));
+                w -> new DeleteThread(w.repository, w.erasure, w.commentVotes).execute("m1"));
         // hiding was idempotent all along and simply was not enforced — three of six commands were
         // in this map, which is not "every command" however the javadoc read
         c.put("hide a comment (moderator)",
-                w -> new HideComment(w.repository, w.moderation).execute("c1", true, true));
+                w -> new HideComment(w.repository, w.moderation).execute("m1", "c1", true, true));
         c.put("mark a leaver's comments for erasure",
                 w -> new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com"));
         c.put("compensate: mark, then restore",

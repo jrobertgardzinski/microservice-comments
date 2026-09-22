@@ -57,8 +57,9 @@ class CommentsConfig {
         // purge votes + delete comment must land or fail together
         return new DeleteComment(commentRepository, commentVotes) {
             @Override
-            public Result execute(String commentId, String caller, boolean callerIsModerator) {
-                return tx.execute(status -> super.execute(commentId, caller, callerIsModerator));
+            public Result execute(String memeId, String commentId, String caller,
+                                  boolean callerIsModerator) {
+                return tx.execute(status -> super.execute(memeId, commentId, caller, callerIsModerator));
             }
         };
     }
@@ -144,7 +145,8 @@ class CommentsConfig {
     }
 
     @Bean
-    DeleteThread deleteThread(CommentRepository commentRepository, CommentVotes commentVotes,
+    DeleteThread deleteThread(CommentRepository commentRepository, CommentErasure erasure,
+                              CommentVotes commentVotes,
                               PlatformTransactionManager transactionManager) {
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
         // per-comment vote purges + the thread delete land together (the cascade stays idempotent).
@@ -157,7 +159,7 @@ class CommentsConfig {
         // The decorator stays because the use case must be atomic on its own too (nothing else
         // guarantees a caller wraps it), and because "join if there is one, open one otherwise" is
         // exactly what REQUIRED means
-        return new DeleteThread(commentRepository, commentVotes) {
+        return new DeleteThread(commentRepository, erasure, commentVotes) {
             @Override
             public List<String> execute(String memeId) {
                 return tx.execute(status -> super.execute(memeId));

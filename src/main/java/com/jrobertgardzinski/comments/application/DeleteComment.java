@@ -24,8 +24,12 @@ public class DeleteComment {
         this.votes = votes;
     }
 
-    public Result execute(String commentId, String caller, boolean callerIsModerator) {
-        Optional<Comment> comment = comments.find(commentId);
+    public Result execute(String memeId, String commentId, String caller, boolean callerIsModerator) {
+        // the address is a comment IN a thread, so the thread is part of it: a comment hanging
+        // under another meme is not at this address, and confirming a deletion against it would
+        // have every cache, log and audit record the wrong conversation
+        Optional<Comment> comment = comments.find(commentId)
+                .filter(found -> found.memeId().equals(memeId));
         if (comment.isEmpty()) {
             return new Result(Status.NO_SUCH_COMMENT, false);
         }

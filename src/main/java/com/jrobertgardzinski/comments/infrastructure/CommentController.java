@@ -95,7 +95,13 @@ class CommentController {
                                    @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER,
                                            required = false) String viewer) {
         int limit = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
-        int offset = Math.max(0, page) * limit;
+        // long arithmetic on purpose: page * limit in ints overflows for an absurd page number,
+        // and a NEGATIVE offset reaches the database as a broken statement (a bare 500) instead
+        // of the empty page an out-of-range page honestly is. The port pages in ints, so the far
+        // end is capped rather than wrapped — a thread with two billion comments does not exist,
+        // and both the cap and the number it stands for list nothing. (The gallery's own listing
+        // in microservice-memes takes the same care, 1c86a5a.)
+        int offset = (int) Math.min((long) Math.max(0, page) * limit, Integer.MAX_VALUE);
         return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
                 .comments().stream().map(CommentController::toBody).toList();
     }
@@ -137,7 +143,7 @@ class CommentController {
         }
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
         boolean hidden = request.hidden();
-        HideComment.Status status = hideComment.execute(commentId, hidden, moderator);
+        HideComment.Status status = hideComment.execute(memeId, commentId, hidden, moderator);
         return switch (status) {
             case UPDATED -> ResponseEntity.ok(Map.of("status", hidden ? "HIDDEN" : "REVEALED", "id", commentId));
             case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_A_MODERATOR",
@@ -173,7 +179,7 @@ class CommentController {
                              @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                      required = false) java.util.Set<String> roles) {
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        DeleteComment.Result result = deleteComment.execute(commentId, caller, moderator);
+        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller, moderator);
         return switch (result.status()) {
             case DELETED -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
                     "by", result.byModerator() ? "MODERATOR" : "AUTHOR"));

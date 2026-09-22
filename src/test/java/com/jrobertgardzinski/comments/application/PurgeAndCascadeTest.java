@@ -179,7 +179,7 @@ class PurgeAndCascadeTest {
         comments.add(new Comment("c3", "other", "a@example.com", "stays"));
         votes.put("c1", new HashMap<>(Map.of("x@example.com", VoteDirection.UP)));
 
-        List<String> dropped = new DeleteThread(repository, commentVotes).execute("gone-meme");
+        List<String> dropped = new DeleteThread(repository, erasure, commentVotes).execute("gone-meme");
 
         assertEquals(List.of("c3"), comments.stream().map(Comment::id).toList());
         assertTrue(votes.isEmpty() || !votes.containsKey("c1"));
@@ -193,7 +193,7 @@ class PurgeAndCascadeTest {
     void thread_cascade_on_an_empty_thread() {
         comments.add(new Comment("c1", "other", "a@example.com", "stays"));
 
-        assertEquals(List.of(), new DeleteThread(repository, commentVotes).execute("quiet-meme"),
+        assertEquals(List.of(), new DeleteThread(repository, erasure, commentVotes).execute("quiet-meme"),
                 "no comments went, so there is no fact to announce (and a rerun says the same)");
     }
 }

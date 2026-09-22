@@ -14,6 +14,12 @@ import java.util.List;
  * saved comment among them) can derive that from the meme id alone — so the next hop of the
  * choreography exists only if this step reports its own work.
  *
+ * <p>It reads the thread through {@link CommentErasure} rather than through
+ * {@link CommentRepository}, and that is not a detail: the repository shows the ACTIVE thread,
+ * while the delete below it destroys the base table's rows — a comment an account-deletion saga has
+ * marked included. Read through the active view, such a comment would be destroyed and named to
+ * nobody, which is exactly the dead reference downstream that the announcement exists to prevent.
+ *
  * <p>Reporting, not announcing: publishing belongs to the caller. The transaction wraps THIS method
  * (the decorator in CommentsConfig), so anything published from inside it would escape before the
  * commit — and a rollback would have announced comments that are still there. Returning the ids
@@ -22,17 +28,20 @@ import java.util.List;
 public class DeleteThread {
 
     private final CommentRepository commentRepository;
+    private final CommentErasure commentErasure;
     private final CommentVotes commentVotes;
 
-    public DeleteThread(CommentRepository commentRepository, CommentVotes commentVotes) {
+    public DeleteThread(CommentRepository commentRepository, CommentErasure commentErasure,
+                        CommentVotes commentVotes) {
         this.commentRepository = commentRepository;
+        this.commentErasure = commentErasure;
         this.commentVotes = commentVotes;
     }
 
     /** @return the ids of the comments this run dropped; empty when the thread was already gone. */
     public List<String> execute(String memeId) {
         List<String> dropped = new ArrayList<>();
-        for (Comment comment : commentRepository.findByMeme(memeId)) {
+        for (Comment comment : commentErasure.allUnder(memeId)) {
             commentVotes.purgeComment(comment.id());
             dropped.add(comment.id());
         }

@@ -22,11 +22,15 @@ public class HideComment {
         this.moderation = moderation;
     }
 
-    public Status execute(String commentId, boolean hidden, boolean callerIsModerator) {
+    public Status execute(String memeId, String commentId, boolean hidden, boolean callerIsModerator) {
         if (!callerIsModerator) {
             return Status.FORBIDDEN;
         }
-        Optional<Comment> comment = comments.find(commentId);
+        // the address is a comment IN a thread, so the thread is part of it: a comment hanging
+        // under another meme is not at this address, and confirming a hide against it would have
+        // every cache, log and audit record the wrong conversation
+        Optional<Comment> comment = comments.find(commentId)
+                .filter(found -> found.memeId().equals(memeId));
         if (comment.isEmpty()) {
             return Status.NO_SUCH_COMMENT;
         }

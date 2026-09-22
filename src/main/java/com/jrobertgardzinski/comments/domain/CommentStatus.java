@@ -26,7 +26,9 @@ public enum CommentStatus {
     /**
      * Marked by a running account-deletion saga: invisible to every public read, still stored,
      * still restorable by the saga's compensation. Only the orchestrator's closure command turns
-     * this into a real delete — never the passage of time.
+     * this into a real delete — never the passage of time. The one other thing that can destroy
+     * such a row is the MEME_DELETED cascade taking the whole thread: a comment whose meme is gone
+     * has nowhere to be restored to, so the cascade counts it among the comments it announces.
      */
     PENDING_ERASURE
 }

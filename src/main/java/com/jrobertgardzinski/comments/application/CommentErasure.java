@@ -16,8 +16,9 @@ import java.util.List;
  * method a caller happened to pick — and would leave {@code CommentReadFilterTest} nothing to
  * enforce.
  *
- * <p>Its three callers are the saga's steps: the mark, its compensation, and the erasure the
- * orchestrator's closure command triggers.
+ * <p>Three of its callers are the saga's steps: the mark, its compensation, and the erasure the
+ * orchestrator's closure command triggers. The fourth is the MEME_DELETED cascade, which reads a
+ * marked comment not to serve it but to destroy it with the rest of its thread — and to say so.
  */
 public interface CommentErasure {
 
@@ -39,6 +40,15 @@ public interface CommentErasure {
      * saga.
      */
     void store(Comment state);
+
+    /**
+     * Everything hanging under one meme, whatever its status — the thread a MEME_DELETED cascade
+     * destroys. A marked comment goes with it (the mark reserved it for a saga, and the meme it
+     * belonged to is gone, so there is nothing left to restore it to), which is precisely why the
+     * cascade has to see it: what it destroys it must also be able to name to the services that
+     * hold a reference to it.
+     */
+    List<Comment> allUnder(String memeId);
 
     /**
      * Every comment marked before {@code cutoff} and still not erased — the reaper's query, and the
