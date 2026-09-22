@@ -44,6 +44,14 @@ public class PurgeUserComments {
 
     public void execute(String author, Optional<PurgeRule> requested) {
         PurgeRule rule = requested.orElse(defaultRule);
+        // FIRST, before any score is read: the leaver's own votes are leaving with him anyway, and a
+        // rule like "keep what the community liked" must be answered by the COMMUNITY. Retracting
+        // them afterwards meant the threshold was measured against a score that no longer existed a
+        // moment later — a leaver who had upvoted his own comment bought its survival with a vote
+        // this method was about to delete. The sibling service fixed the same ordering as P18 poz.
+        // 39; it is also why the rule is not read at MARK time (MarkUserCommentsForErasure): the
+        // mark must change nothing, and this ordering needs the votes to go first.
+        commentVotes.purgeVoter(author);
         for (Comment comment : erasure.pendingOf(author)) {
             if (rule.keeps(commentVotes.scoreOf(comment.id()))) {
                 commentRepository.reassignAuthor(comment.id(), DeletedAccount.AUTHOR);
@@ -53,6 +61,5 @@ public class PurgeUserComments {
                 commentRepository.delete(comment.id());
             }
         }
-        commentVotes.purgeVoter(author);
     }
 }

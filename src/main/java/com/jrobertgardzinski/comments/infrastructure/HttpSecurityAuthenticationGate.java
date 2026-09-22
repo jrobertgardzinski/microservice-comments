@@ -60,7 +60,13 @@ class HttpSecurityAuthenticationGate implements SecurityAuthenticationGate {
             Set<String> roles = body.get("roles") instanceof Collection<?> raw
                     ? raw.stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet())
                     : Set.of("USER");
-            return Optional.of(new Caller(email, roles));
+            // the MFA floor, the same one the offline twin applies: an under-enrolled privileged
+            // account acts as a plain USER. Fail-closed when the field is missing — an old security
+            // that does not report it withholds nothing from ordinary users, only from privileged
+            // ones. Without this the two interchangeable gates disagreed about who a moderator is,
+            // and the DEFAULT one was the permissive half (PLAN-P12 S3).
+            boolean mfaCompliant = Boolean.TRUE.equals(body.get("mfaCompliant"));
+            return Optional.of(new Caller(email, Caller.withMfaFloor(roles, mfaCompliant)));
         } catch (RestClientException invalidTokenOrServiceDown) {
             return Optional.empty();
         }

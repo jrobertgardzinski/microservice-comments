@@ -117,6 +117,23 @@ class PurgeAndCascadeTest {
     }
 
     @Test
+    @DisplayName("a comment kept only by the leaver's own vote is not what the community liked")
+    void the_leavers_own_votes_do_not_count_towards_the_threshold() {
+        comments.add(new Comment("self-liked", "m1", "leaver@example.com", "praise from the author"));
+        // two votes, one of them the leaver's own — and his is leaving with him, so the community's
+        // verdict on this comment is ONE. Counting his made the threshold of two look met.
+        votes.put("self-liked", new HashMap<>(Map.of(
+                "leaver@example.com", VoteDirection.UP, "fan@example.com", VoteDirection.UP)));
+
+        mark.execute("leaver@example.com");
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
+                .execute("leaver@example.com", Optional.of(new PurgeRule.KeepPopularAnonymized(2)));
+
+        assertTrue(comments.isEmpty(),
+                "a comment kept only by the leaver's own vote is not what the community liked");
+    }
+
+    @Test
     @DisplayName("the mark hides the leaver's comments and destroys nothing")
     void the_mark_is_reversible() {
         comments.add(new Comment("reserved", "m1", "leaver@example.com", "still here"));

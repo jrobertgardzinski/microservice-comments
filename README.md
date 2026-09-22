@@ -16,9 +16,12 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
     `/.well-known/jwks.json` (keys cached; an unknown `kid` refetches once, which also covers
     security restarting with fresh keys). No per-request call — the trade-off is revocation
     blindness until the token's `exp`.
-- **microservice-memes** — meme existence checks (HEAD) so comments never attach to ghosts, and
-  the `MEME_DELETED` events on `memes-events`: when a meme goes, this service drops its whole
-  thread (eventually consistent, idempotent).
+- **microservice-memes** — meme existence checks (a HEAD to `/memes/{id}/meta`, one indexed row —
+  NOT to the picture URL, which would read the whole image out of object storage per comment) so
+  comments never attach to ghosts, and the `MEME_DELETED` events on `memes-events`: when a meme
+  goes, this service drops its whole thread (eventually consistent, idempotent). A memes that
+  cannot be reached or answers 5xx is not a meme that is missing: the POST above then answers 503
+  and the commenter is told to try again, instead of a 404 saying the meme does not exist.
 - **microservice-user-collections** — the next hop of that same cascade. Having dropped the thread,
   this service announces `COMMENTS_DELETED` on `comments-events` naming every comment it took,
   because nobody else ever knew which comments hung under that meme. Choreography, not saga: no
@@ -52,7 +55,7 @@ module (`domain` / `config` / `application` / `infrastructure` packages).
 
 ```
 GET    /memes/{memeId}/comments?page=&size=        -> 200 [ { id, author, text, score, myVote } ]   (size cap 100, default 50)
-POST   /memes/{memeId}/comments                    { "text": ... }      -> 201 | 400 | 401 | 404 | 429
+POST   /memes/{memeId}/comments                    { "text": ... }      -> 201 | 400 | 401 | 404 | 429 | 503
 POST   /memes/{memeId}/comments/{commentId}/votes  { "direction": ... } -> 200 { score, myVote } | 401 | 404
 DELETE /memes/{memeId}/comments/{commentId}        author their own; MODERATOR/ADMIN anyone's
 PUT    /memes/{memeId}/comments/{commentId}/hidden { "hidden": ... }    MODERATOR/ADMIN only -> 200 | 403 | 404
