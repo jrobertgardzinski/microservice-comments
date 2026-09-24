@@ -14,7 +14,7 @@ import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
-import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.purge.PurgeRule;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.Test;

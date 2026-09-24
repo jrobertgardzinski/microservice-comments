@@ -6,7 +6,7 @@ import com.jrobertgardzinski.closure.ClosureMessages;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
-import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Observation;
 import com.jrobertgardzinski.observation.Observations;
 import io.qameta.allure.Epic;

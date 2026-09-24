@@ -18,6 +18,13 @@
     -->
     <dependencies>
         <dependency>
+            <!-- the three words that say what becomes of a leaver's content; shared with the
+                 twin service that also holds authored content -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>purge-rule</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>comments-application</artifactId>
         </dependency>

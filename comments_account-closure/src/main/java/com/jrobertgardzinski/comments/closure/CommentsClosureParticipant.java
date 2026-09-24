@@ -5,7 +5,7 @@ import com.jrobertgardzinski.closure.ClosureMessages;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
-import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Observation;
 import com.jrobertgardzinski.observation.Observations;
 import org.slf4j.Logger;
@@ -13,8 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * The comments service's side of the account-closure saga: a participant in TWO phases, which is
@@ -184,47 +182,12 @@ public final class CommentsClosureParticipant {
         try {
             return Optional.of(PurgeRule.parse(text));
         } catch (IllegalArgumentException invalid) {
-            // NOT invalid.getMessage(): parse() pastes the raw rule text from the wire into it —
-            // a constant plus the length and a vocabulary-only fragment is enough to investigate
-            LOG.warn("ignoring an unparseable comments purge rule ({} chars, looks like '{}'), "
-                    + "using the default", text.length(), sanitizedFragment(text));
+            // invalid.getMessage() is safe to log now, and that is the whole point of having moved
+            // the vocabulary into the library: the refusal states the length and the SHAPE, never
+            // the text, so a new caller cannot reintroduce the leak by logging the obvious thing
+            LOG.warn("ignoring an unparseable comments purge rule, using the default: {}",
+                    invalid.getMessage());
             return Optional.empty();
         }
-    }
-
-    /**
-     * The purge-rule VOCABULARY, whole tokens only — never the raw wire text. The old per-character
-     * filter ({@code [A-Z_:0-9]}) kept every digit and every uppercase letter, which is exactly the
-     * alphabet of phone numbers, PESELs and SHOUTED e-mail addresses — numeric and uppercase PII
-     * sailed through it into the WARN. This whitelist inverts the burden of proof: only the three
-     * rule words survive, with a popularity threshold (≤4 digits) accepted solely in its grammar
-     * position after {@code KEEP_POPULAR_ANONYMIZED:} — a free-standing number is NOT vocabulary,
-     * because "601 234 567" is a phone number chunked into innocent-looking ≤4-digit tokens.
-     * Everything unrecognised collapses to a single {@code ?} per run, so the log shows the rule's
-     * shape ("was it almost a rule?") and none of its content.
-     *
-     * <p>The memes participant holds the same whitelist, because the two services' rule words are
-     * the same words. It is NOT in the shared library: that library is the saga's vocabulary, and
-     * the policy object is explicitly not part of it, and a service whose rule words
-     * differed would need its own.
-     */
-    private static final Pattern VOCABULARY = Pattern.compile(
-            "(?<![A-Z_0-9:])(?:KEEP_POPULAR_ANONYMIZED(?::\\d{1,4})?|ANONYMIZE_AUTHOR|DELETE)(?![A-Z_0-9:])");
-
-    private static String sanitizedFragment(String text) {
-        StringBuilder kept = new StringBuilder();
-        Matcher vocabulary = VOCABULARY.matcher(text);
-        int consumedUpTo = 0;
-        while (vocabulary.find()) {
-            if (vocabulary.start() > consumedUpTo) {
-                kept.append('?');   // one ? per unrecognised run, no matter how long or what it held
-            }
-            kept.append(vocabulary.group());
-            consumedUpTo = vocabulary.end();
-        }
-        if (consumedUpTo < text.length() || text.isEmpty()) {
-            kept.append('?');
-        }
-        return kept.length() <= 32 ? kept.toString() : kept.substring(0, 32) + "…";
     }
 }

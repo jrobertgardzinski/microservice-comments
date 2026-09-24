@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
-import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.DeletedAccount;
 import com.jrobertgardzinski.voting.VoteDirection;

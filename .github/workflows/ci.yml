@@ -1,6 +1,7 @@
 name: CI
 
-# microservice-comments needs one sibling SNAPSHOT (voting, public), so CI checks it out and
+# microservice-comments needs two sibling SNAPSHOTs (voting and purge-rule, both public), so
+# CI checks them out and
 # installs it first. Checkouts use the workspace layout (each repo in its own directory) because
 # both provider tests verify a neighbour's committed pact from its sibling checkout — offboarding's
 # saga confirmation and user-collections' COMMENTS_DELETED cascade. A consumer that is not cloned
@@ -25,6 +26,10 @@ jobs:
         with:
           repository: jrobertgardzinski/voting
           path: voting
+      - uses: actions/checkout@v7
+        with:
+          repository: jrobertgardzinski/purge-rule
+          path: purge-rule
       - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/observation
@@ -69,6 +74,7 @@ jobs:
       - name: Install the shared libraries
         run: |
           mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f purge-rule/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f observation/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f account-closure/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests

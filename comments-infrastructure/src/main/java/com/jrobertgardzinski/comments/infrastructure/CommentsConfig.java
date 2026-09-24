@@ -15,7 +15,7 @@ import com.jrobertgardzinski.comments.application.MemeDirectory;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
-import com.jrobertgardzinski.comments.config.PurgeRule;
+import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.config.RateLimit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
