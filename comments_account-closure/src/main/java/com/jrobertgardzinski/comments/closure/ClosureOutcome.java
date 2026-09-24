@@ -1,9 +1,17 @@
 package com.jrobertgardzinski.comments.closure;
 
 /**
- * What the participant did with a command. Returned rather than logged-and-forgotten so that a
- * caller in any assembly can act on it: over a broker the adapter acknowledges the record, in one
- * process the bus can hand it straight back to the orchestrator.
+ * What the participant did with a command.
+ *
+ * <p><strong>Nothing in this service reads it yet</strong>, and that is worth saying rather than
+ * implying otherwise. The Kafka listener discards it: over a broker this participant answers
+ * through the outbox, inside the same transaction as the mark, so a returned value has nowhere
+ * to go. The portal's one-process specs read it, and nothing else does.
+ *
+ * <p>The collections participant works the other way round — it returns its outcome and its
+ * consumer builds the confirmation — and which of the two shapes all three should take is a
+ * decision about assembly, not about closing an account. It is open on purpose. Until it is
+ * settled, this type states the answer and lets the caller ignore it.
  */
 public sealed interface ClosureOutcome {
 

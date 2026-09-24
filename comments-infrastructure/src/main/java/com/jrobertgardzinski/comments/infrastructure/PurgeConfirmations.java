@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.closure.ClosureConfirmation;
 import com.jrobertgardzinski.closure.ClosureMessages;
 import com.jrobertgardzinski.outbox.OutboxEvent;
 import com.jrobertgardzinski.outbox.spring.SpringOutbox;
@@ -103,21 +104,14 @@ class PurgeConfirmations {
     OutboxEvent confirmationOf(String sagaId, String leaver, int reserved) {
         String payload;
         try {
-            var confirmation = mapper.createObjectNode()
-                    .put("type", USER_CONTENT_PURGED)
-                    .put("email", leaver)
-                    .put("reserved", reserved)
-                    .put("version", 1);
-            // A BLANK sagaId is worse than an absent one. The orchestrator drops a confirmation
-            // whose sagaId is present but unparseable — a deliberate poison-pill rule — while one
-            // with NO sagaId falls back to matching by e-mail. So a purge command that arrived
-            // without the field (an older producer, a hand-published record) had its confirmation
-            // thrown away rather than matched, and the saga waited out its timeout for an answer
-            // that had in fact come back.
-            if (sagaId != null && !sagaId.isBlank()) {
-                confirmation.put("sagaId", sagaId);
-            }
-            payload = mapper.writeValueAsString(confirmation);
+            // The FIELD SET is the agreement's, not this service's: ClosureConfirmation knows
+            // which fields go out — including the rule about a blank saga id, which used to be
+            // three copies of one comment — and this service only says what it reserved. Still
+            // Jackson and not concatenation, because the values come off the wire and an address
+            // may legally contain a quote: "odd\"one"@example.com concatenated is a payload the
+            // broker accepts and no consumer can parse.
+            payload = mapper.writeValueAsString(
+                    new ClosureConfirmation(sagaId, leaver, reserved).fields());
         } catch (Exception impossible) {
             // Two strings and a number. If THIS cannot be serialised nothing in this service can —
             // and a throw is right: it happens inside the purge's transaction, so the erasure rolls

@@ -71,8 +71,16 @@ Tylko otwarte rzeczy. Historia = git log.
   beana-ogłoszeniodawcę, broker to nie kontrakt; hook @Before resetuje wątek kaskadą).
   2026-08-10: rozbite na `specs/*.feature` przy szczycie repo — jeden use-case, jeden plik
   (konwencja microservice-security: build-helper na classpath, Rule/Example, język biznesowy).
-- **Słownik `PurgeRule` zduplikowany** z memes (celowo — wspólny kontrakt tekstowy); rozważyć
-  malutką libkę, jeśli urośnie trzeci konsument.
+- ~~**Słownik `PurgeRule` zduplikowany** z memes (celowo — wspólny kontrakt tekstowy); rozważyć
+  malutką libkę, jeśli urośnie trzeci konsument.~~ **ZROBIONE 2026-09-24 — i ten werdykt został
+  ŚWIADOMIE OBALONY, nie spełniony.** Trzeciego konsumenta nadal nie ma i pewnie nie będzie:
+  collections trzyma wskaźniki, powiadomienia też nie będą miały autora do anonimizacji. Powodem
+  ekstrakcji była TRZECIA i CZWARTA PISOWNIA tej samej gramatyki — każdy uczestnik sagi dorobił
+  sobie własny regex `VOCABULARY` do czyszczenia logów, i te regeksy nie zgadzały się z `parse()`
+  (`\d{1,4}` kontra dowolny int). Czterech pisowni jednej gramatyki nikt nie upilnuje. Libka:
+  `shared/purge-rule`, obok `voting`, bo to ta sama para konsumentów. Przy okazji naprawiony
+  korzeń: `parse()` nie wkleja już surowego tekstu do wyjątku, więc regeksy zniknęły z obu
+  uczestników — bezpiecznik siedzi w typie, nie u wołających.
 - **Deduplikacja konsumenta** — purge idempotentny, więc zbędna; przy nie-idempotentnych
   komendach dołożyć dedup po id.
 - **PROPOZYCJA (NIE IMPLEMENTOWAĆ bez zgody) — `COMMENTS_DELETED` też przy pojedynczym kasowaniu.**
