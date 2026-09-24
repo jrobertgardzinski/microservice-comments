@@ -10,7 +10,14 @@ Maven modules — the estate's layers, the same names its siblings use:
 | `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK |
 | `comments-config` | the typed dials: purge rule, rate limit, erasure tolerance | the JDK |
 | `comments-application` | the use cases and their ports | domain, config, `voting`, `observation` |
+| `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | application, domain, config, `account-closure` |
 | `comments-infrastructure` | HTTP, JDBC, Kafka, Flyway, the probes, `main()` | everything |
+
+The underscore in the fifth row is not a typo. `comments-<x>` is a LAYER of this service;
+`comments_<x>` is this service's part in a process it shares with others, named after the
+library the participants speak through. `memes_account-closure` is the other end of that same
+conversation, and neither of them is a layer. Read it and you know what a closing account does
+to a person's comments — with no Kafka, no database and no Spring in the way.
 
 They are modules and not packages because a package boundary is a convention and a classpath is
 not. Until 2026-09-24 this service built ONE artifact that the Spring Boot plugin repackaged, so

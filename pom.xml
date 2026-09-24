@@ -54,6 +54,7 @@
         <module>comments-domain</module>
         <module>comments-config</module>
         <module>comments-application</module>
+        <module>comments_account-closure</module>
         <module>comments-infrastructure</module>
     </modules>
 
@@ -87,6 +88,11 @@
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
                 <artifactId>comments-application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>comments_account-closure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!-- foreign artifacts pinned explicitly -->

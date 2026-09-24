@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import com.jrobertgardzinski.comments.closure.CommentsClosureParticipant;
 import com.jrobertgardzinski.comments.domain.Observation;
 import com.jrobertgardzinski.observation.Observations;
 import io.qameta.allure.Epic;
@@ -56,16 +57,25 @@ class PurgeCommandsListenerTest {
     @BeforeEach
     void tapTheLog() {
         logLines.start();
-        listenerLogger().addAppender(logLines);
+        tappedLoggers().forEach(logger -> logger.addAppender(logLines));
     }
 
     @AfterEach
     void untapTheLog() {
-        listenerLogger().detachAppender(logLines);
+        tappedLoggers().forEach(logger -> logger.detachAppender(logLines));
     }
 
-    private static Logger listenerLogger() {
-        return (Logger) LoggerFactory.getLogger(PurgeCommandsListener.class);
+    /**
+     * BOTH loggers, because the two halves of this path log for different reasons: the adapter
+     * says what it could not read off the wire, and the participant (comments_account-closure)
+     * says what it decided. A test watching only one of them would go half blind the moment a
+     * line moved across that boundary — which is exactly what happened when the participant was
+     * cut out of the listener.
+     */
+    private static java.util.List<Logger> tappedLoggers() {
+        return java.util.List.of(
+                (Logger) LoggerFactory.getLogger(PurgeCommandsListener.class),
+                (Logger) LoggerFactory.getLogger(CommentsClosureParticipant.class));
     }
 
     @Test
