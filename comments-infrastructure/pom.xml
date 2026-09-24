@@ -29,6 +29,16 @@
             <artifactId>comments-application</artifactId>
         </dependency>
         <dependency>
+            <!-- the port contracts: this module holds the REFERENCE implementations, so it is the
+                 one whose answers the stand-ins are held to. The version is stated because the
+                 reactor's management pins the ordinary jar and a test-jar is a different artifact. -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-application</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <!-- this service's side of the account-closure saga: the decisions, without the wire.
                  The Kafka listener next door only carries commands to it. -->
             <groupId>com.jrobertgardzinski</groupId>
