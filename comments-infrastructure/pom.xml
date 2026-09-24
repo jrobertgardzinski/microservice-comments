@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.jrobertgardzinski</groupId>
+        <artifactId>microservice-comments</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>comments-infrastructure</artifactId>
+
+    <!--
+      The Spring Boot application: the HTTP boundary, the JDBC adapters, the Kafka listeners and
+      producers, Flyway's migrations, the probes and the entry point. This is the deployable, and
+      the ONLY module the Spring Boot plugin repackages — everything above it stays a plain jar a
+      monolith assembly can depend on.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-application</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--
+          Explicit since Spring Boot 4, and JACKSON 2 on purpose. Boot 4 stopped bundling a JSON
+          mapper with the web starter, so the choice is now the application's to state; its own
+          default is Jackson 3 (tools.jackson.*), a different package root from the
+          com.fasterxml.jackson.* this service imports in 52 places. spring-boot-jackson2 is Boot 4's
+          supported module for exactly that situation and contributes the com.fasterxml ObjectMapper
+          bean the announcer and the saga listeners are wired to.
+
+          Deliberate and worth naming: moving to Jackson 3 is a SECOND migration - new package root,
+          new exception hierarchy, unchecked where 2 was checked - and doing it inside the Spring
+          Boot 4 change would leave neither one verifiable on its own. Filed, not forgotten.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
+        </dependency>
+        <!-- observability: /actuator/prometheus for the workspace's Prometheus+Grafana -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!--
+          The starters carry Spring Boot 4's per-technology AUTO-CONFIGURATION, which used to live in
+          one spring-boot-autoconfigure jar and be switched on by the mere presence of the library.
+          Boot 4 split it up, so declaring flyway-core or spring-kafka alone leaves them
+          unconfigured - migrations never run and no KafkaTemplate bean is created, both of which
+          this service failed on before these two lines existed.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <!-- the words this service shares with identity and the orchestrator when an account
+             closes: the command names and who asked for the closure -->
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>account-closure</artifactId>
+        </dependency>
+        <!-- the shared offline verification of security's access tokens (was a local copy;
+             the five twins converged into the library) -->
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>offline-jwt</artifactId>
+        </dependency>
+        <!-- COMMENTS_DELETED durability (round 10): the framework-free outbox core plus its Spring
+             adapter, extracted from microservice-memes' hardened implementation. This service used
+             to argue that an outbox was too expensive for the cascade's stakes; owning one now
+             costs a migration and a config class, which is a different sum — see
+             V4__comment_events_outbox.sql. -->
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>transactional-outbox</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>infrastructure-spring-outbox</artifactId>
+        </dependency>
+        <dependency>
+            <!-- tests run the real JDBC adapters on H2 (PostgreSQL mode) — no Docker needed -->
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <!-- runtime, not test: the UI e2e harness (and any DB-less dev run) boots the real
+                 jar on in-memory H2 in PostgreSQL mode, the same pattern memes uses -->
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          Spring Boot 4 broke the old catch-all starter apart: spring-boot-starter-test no longer
+          carries the per-technology test support, so @AutoConfigureMockMvc and the MockMvc
+          auto-configuration it turns on now arrive through this starter instead. Without it the
+          annotation simply is not on the classpath and the controller tests do not compile.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- a real PostgreSQL 16 for the dialect bet: the MERGE upserts, the concurrent
+                 first-vote unique violation and the V3 foreign key are proven against the very
+                 database the stack runs, not only H2's PostgreSQL mode; skipped where docker is
+                 absent (the same pattern as memes' MinIO test). Version pinned in the parent since
+                 Spring Boot 4's BOM stopped managing testcontainers - it used to be managed like
+                 every other dependency and silently would not be any more. -->
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-spring</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-cucumber7-jvm</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- consumer-driven contract: the pact test states which saga commands this service
+             understands; the generated pact (../pacts, committed) is verified against the REAL
+             producer code by microservice-security's provider tests -->
+        <dependency>
+            <groupId>au.com.dius.pact.consumer</groupId>
+            <artifactId>junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- the provider's half of the saga-confirmation contract: verifies security's
+                 committed pact against the REAL confirmation-building code; skipped gracefully
+                 when the consumer repo is not checked out next to this one -->
+            <groupId>au.com.dius.pact.provider</groupId>
+            <artifactId>junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <!-- without spring-boot-starter-parent, repackage must be bound explicitly;
+                             package then produces the executable jar the Dockerfile copies. It is
+                             bound HERE and nowhere else: a repackaged jar hides its classes under
+                             BOOT-INF/, so a layer that was repackaged cannot be depended on. -->
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- the specs/ dir at the microservice root (one Gherkin file per use case — the
+                 entry point into this service) goes onto this module's test classpath instead of
+                 copying the files around; microservice-security's convention -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-specs</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../specs</directory>
+                                    <includes>
+                                        <include>**/*.feature</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- the contract test writes the pact to the repo root (committed, not
+                             target/) so the producer's provider tests verify it from a sibling
+                             checkout -->
+                        <pact.rootDir>${project.basedir}/../pacts</pact.rootDir>
+                        <pact_do_not_track>true</pact_do_not_track>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

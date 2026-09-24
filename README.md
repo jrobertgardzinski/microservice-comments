@@ -2,8 +2,22 @@
 
 Comment threads under memes, extracted into their own microservice — with **real persistence**
 (Postgres + Flyway; H2 stands in for tests) and voting from the shared **`voting` library**
-(the bounded context: one-vote-per-voter toggle + tally). Spring Boot, hexagon-lite in a single
-module (`domain` / `config` / `application` / `infrastructure` packages).
+(the bounded context: one-vote-per-voter toggle + tally). Spring Boot, hexagon-lite in four
+Maven modules — the estate's layers, the same names its siblings use:
+
+| module | what is in it | what it may see |
+| --- | --- | --- |
+| `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK |
+| `comments-config` | the typed dials: purge rule, rate limit, erasure tolerance | the JDK |
+| `comments-application` | the use cases and their ports | domain, config, `voting`, `observation` |
+| `comments-infrastructure` | HTTP, JDBC, Kafka, Flyway, the probes, `main()` | everything |
+
+They are modules and not packages because a package boundary is a convention and a classpath is
+not. Until 2026-09-24 this service built ONE artifact that the Spring Boot plugin repackaged, so
+every class of it lived under `BOOT-INF/classes/` and a plain Maven dependency on it put nothing
+on anyone's compile classpath: a monolith assembly — the portal deployed as one process instead
+of six — could take no part of this service at all. Now only `comments-infrastructure` is
+repackaged; the three layers above it are plain, depend-able jars.
 
 ## Who it talks to
 

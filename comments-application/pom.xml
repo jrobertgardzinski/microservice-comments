@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.jrobertgardzinski</groupId>
+        <artifactId>microservice-comments</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>comments-application</artifactId>
+
+    <!-- Use cases + the ports they speak through. Depends on the domain, the dials and the two
+         shared vocabularies; no framework. -->
+    <dependencies>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-config</artifactId>
+        </dependency>
+        <dependency>
+            <!-- the voting bounded context: toggle semantics + tally, shared with microservice-memes -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>voting</artifactId>
+        </dependency>
+        <dependency>
+            <!-- the port a service states its own facts through; the facts themselves stay ours -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>observation</artifactId>
+        </dependency>
+        <dependency>
+            <!--
+              Declared, not inherited. ListComments logs the one thing only it knows — that a vote
+              store outage turned a thread into an unscored listing — and until the split it got
+              slf4j transitively from the web starter. A facade is not a framework: there is no
+              binding here, so what the use case writes to is whatever the deployable supplies.
+            -->
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

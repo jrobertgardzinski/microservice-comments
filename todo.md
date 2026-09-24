@@ -89,3 +89,18 @@ Tylko otwarte rzeczy. Historia = git log.
   (`RateLimit` w config, env COMMENT_RATE_LIMIT, default 20/min, 429+Retry-After).
   Kontrakt GET wstecznie zgodny (płaska lista = strona 0). 2 nowe scenariusze Gherkin +
   RateLimitTest; wszystko zielone.
+
+## Zrobione (struktura budowania)
+- **Warstwy jako moduły Mavena** (2026-09-24): `comments-domain` / `comments-config` /
+  `comments-application` / `comments-infrastructure`. Pakiety BEZ ZMIAN — to zmiana budowania,
+  nie nazw. Powód jest jeden i konkretny: serwis budował JEDEN artefakt, który plugin Spring Boota
+  przepakowywał, więc wszystkie klasy siedziały w `BOOT-INF/classes/` i zwykła zależność mavenowa
+  na ten artefakt nie dawała nikomu ANI JEDNEJ klasy na classpath kompilacji. Monolit (portal jako
+  jeden proces) nie mógł wziąć z tego serwisu niczego. Teraz `repackage` jest tylko w
+  `comments-infrastructure`; trzy warstwy nad nim to zwykłe jary (0 wpisów `BOOT-INF`).
+  Suita bez zmian: 189 testów przed i po. Przy okazji trzeba było przesunąć ścieżki względne w
+  testach o jeden poziom (`../..` do sąsiednich repozytoriów i do `k8s/`) — dokładnie tak, jak ma
+  to memes po swoim podziale.
+  **Zostaje po stronie workspace'u** (inne repo, nie ruszane): `memes-up.sh` i
+  `.github/workflows/ci.yml` w `workspace-portal` budują `-pl ... microservice-comments ...`,
+  co dziś zbuduje sam agregator bez jara — musi być `microservice-comments/comments-infrastructure`.
