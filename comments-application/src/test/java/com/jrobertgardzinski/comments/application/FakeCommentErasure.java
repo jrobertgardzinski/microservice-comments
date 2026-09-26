@@ -16,13 +16,18 @@ import java.util.Map;
  * <p>The marks live in their own map rather than being written back onto the stored records,
  * exactly as the real schema keeps them on the row and out of every read: whatever is not marked is
  * ACTIVE, which is what {@code active_comments} says.
+ *
+ * <p>Public, and this module's own test-jar publishes it: it is the one reference stand-in for
+ * {@link CommentErasure}, right beside the port and {@link CommentErasureContractTest}, so a
+ * consumer that needs only the erasure axis (not a full {@link CommentRepository}) never has a
+ * reason to write its own.
  */
-class FakeCommentErasure implements CommentErasure {
+public class FakeCommentErasure implements CommentErasure {
 
     private final List<Comment> comments;
     private final Map<String, Instant> marks = new HashMap<>();
 
-    FakeCommentErasure(List<Comment> comments) {
+    public FakeCommentErasure(List<Comment> comments) {
         this.comments = comments;
     }
 
