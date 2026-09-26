@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.comments.application.CommentErasure;
-import com.jrobertgardzinski.comments.application.CommentErasureContract;
+import com.jrobertgardzinski.comments.application.CommentErasureContractTest;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.domain.Comment;
 import io.qameta.allure.Epic;
@@ -17,7 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Epic("Architecture")
 @Feature("A stand-in behaves like the adapter it stands in for")
 @SpringBootTest(classes = CommentsApplication.class)
-class JdbcCommentErasureContractTest extends CommentErasureContract {
+class JdbcCommentErasureTest extends CommentErasureContractTest {
 
     @Autowired
     CommentErasure erasure;

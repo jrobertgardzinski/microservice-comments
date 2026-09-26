@@ -10,7 +10,7 @@ import java.util.List;
 /** The stand-in these use-case tests run on, held to the same promises as the real adapter. */
 @Epic("Architecture")
 @Feature("A stand-in behaves like the adapter it stands in for")
-class FakeCommentErasureContractTest extends CommentErasureContract {
+class FakeCommentErasureTest extends CommentErasureContractTest {
 
     private final List<Comment> comments = new ArrayList<>();
     private final FakeCommentErasure erasure = new FakeCommentErasure(comments);

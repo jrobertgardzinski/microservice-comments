@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * to exist in it. Everything else is asked through the port, because a seam that reads the rows
  * some other way could lie in the same breath as the thing it is checking.
  */
-public abstract class CommentErasureContract {
+public abstract class CommentErasureContractTest {
 
     private static final Instant NOON = Instant.parse("2026-09-24T12:00:00Z");
 
