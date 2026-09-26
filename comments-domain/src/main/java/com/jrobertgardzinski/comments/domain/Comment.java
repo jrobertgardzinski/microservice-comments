@@ -82,4 +82,15 @@ public record Comment(String id, String memeId, String author, Optional<UserId> 
     public boolean isPendingErasure() {
         return status == CommentStatus.PENDING_ERASURE;
     }
+
+    /**
+     * Whether this caller wrote it: the ids decide when both sides have one, the address decides
+     * while either is still missing (a row before the backfill, a token before the cutover).
+     */
+    public boolean isAuthoredBy(String callerEmail, Optional<UserId> callerId) {
+        if (authorId.isPresent() && callerId.isPresent()) {
+            return authorId.equals(callerId);
+        }
+        return author.equals(callerEmail);
+    }
 }

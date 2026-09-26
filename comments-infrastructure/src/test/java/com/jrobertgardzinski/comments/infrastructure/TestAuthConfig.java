@@ -36,6 +36,14 @@ public class TestAuthConfig {
     public static final String MODERATOR_TOKEN = "test-token-mod";
     public static final String MODERATOR_USER = "mod@example.com";
     public static final String EXISTING_MEME = "known-meme";
+    /** Tokens minted after the cutover: the subject is the id, the address is a claim. */
+    public static final com.jrobertgardzinski.identity.UserId ALICE_ID =
+            com.jrobertgardzinski.identity.UserId.of("6f1d2c3b-4a59-4e8f-9b0c-1d2e3f4a5b6c");
+    public static final String ALICE_ID_TOKEN = "test-token-alice-id";
+    /** The same id after a change of address. */
+    public static final String ALICE_ID_RENAMED_TOKEN = "test-token-alice-id-renamed";
+    /** Alice's old address under a brand-new account. */
+    public static final String IMPOSTOR_TOKEN = "test-token-impostor";
 
     @Bean
     @Primary
@@ -45,6 +53,10 @@ public class TestAuthConfig {
             case RENAMED_TOKEN -> Optional.of(new Caller(RENAMED_USER, Set.of("USER")));
             case SECOND_TOKEN -> Optional.of(new Caller(SECOND_USER, Set.of("USER")));
             case MODERATOR_TOKEN -> Optional.of(new Caller(MODERATOR_USER, Set.of("USER", "MODERATOR")));
+            case ALICE_ID_TOKEN -> Optional.of(new Caller(SIGNED_IN_USER, Optional.of(ALICE_ID), Set.of("USER")));
+            case ALICE_ID_RENAMED_TOKEN -> Optional.of(new Caller(RENAMED_USER, Optional.of(ALICE_ID), Set.of("USER")));
+            case IMPOSTOR_TOKEN -> Optional.of(new Caller(SIGNED_IN_USER,
+                    Optional.of(com.jrobertgardzinski.identity.UserId.random()), Set.of("USER")));
             default -> Optional.empty();
         };
     }

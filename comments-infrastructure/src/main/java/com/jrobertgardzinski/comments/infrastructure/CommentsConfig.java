@@ -69,8 +69,10 @@ class CommentsConfig {
         return new DeleteComment(commentRepository, commentVotes) {
             @Override
             public Result execute(String memeId, String commentId, String caller,
+                                  java.util.Optional<com.jrobertgardzinski.identity.UserId> callerId,
                                   boolean callerIsModerator) {
-                return tx.execute(status -> super.execute(memeId, commentId, caller, callerIsModerator));
+                return tx.execute(status ->
+                        super.execute(memeId, commentId, caller, callerId, callerIsModerator));
             }
         };
     }

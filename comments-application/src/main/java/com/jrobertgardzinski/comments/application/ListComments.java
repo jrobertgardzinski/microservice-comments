@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.voting.VoteTally;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,11 @@ public class ListComments {
     }
 
     public Page execute(String memeId, Optional<String> viewer, int offset, int limit) {
+        return execute(memeId, viewer, Optional.empty(), offset, limit);
+    }
+
+    public Page execute(String memeId, Optional<String> viewer, Optional<UserId> viewerId, int offset,
+                        int limit) {
         Set<String> hidden = moderation.hiddenIn(memeId);
         List<Comment> page = commentRepository.findByMeme(memeId, offset, limit);
         Map<String, VoteTally> tallies = talliesOrNull(page, viewer);
@@ -48,7 +54,7 @@ public class ListComments {
                         tallies == null ? null
                                 : tallies.getOrDefault(comment.id(), new VoteTally(0, Optional.empty())),
                         hidden.contains(comment.id()),
-                        viewer.map(comment.author()::equals).orElse(false)))
+                        viewer.map(email -> comment.isAuthoredBy(email, viewerId)).orElse(false)))
                 .toList();
         return new Page(comments, offset, limit);
     }

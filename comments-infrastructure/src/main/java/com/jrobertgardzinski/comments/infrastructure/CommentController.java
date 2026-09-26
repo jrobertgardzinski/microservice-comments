@@ -99,7 +99,9 @@ class CommentController {
                                    @RequestParam(name = "page", defaultValue = "0") int page,
                                    @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
                                    @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER,
-                                           required = false) String viewer) {
+                                           required = false) String viewer,
+                                   @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID,
+                                           required = false) com.jrobertgardzinski.identity.UserId viewerId) {
         int limit = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         // long arithmetic on purpose: page * limit in ints overflows for an absurd page number,
         // and a NEGATIVE offset reaches the database as a broken statement (a bare 500) instead
@@ -108,7 +110,7 @@ class CommentController {
         // and both the cap and the number it stands for list nothing. (The gallery's own listing
         // in microservice-memes takes the same care, 1c86a5a.)
         int offset = (int) Math.min((long) Math.max(0, page) * limit, Integer.MAX_VALUE);
-        return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
+        return listComments.execute(memeId, Optional.ofNullable(viewer), Optional.ofNullable(viewerId), offset, limit)
                 .comments().stream().map(this::toBody).toList();
     }
 
@@ -182,10 +184,13 @@ class CommentController {
     ResponseEntity<?> delete(@PathVariable("memeId") String memeId,
                              @PathVariable("commentId") String commentId,
                              @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String caller,
+                             @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID,
+                                     required = false) com.jrobertgardzinski.identity.UserId callerId,
                              @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                      required = false) java.util.Set<String> roles) {
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller, moderator);
+        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller,
+                Optional.ofNullable(callerId), moderator);
         return switch (result.status()) {
             case DELETED -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
                     "by", result.byModerator() ? "MODERATOR" : "AUTHOR"));

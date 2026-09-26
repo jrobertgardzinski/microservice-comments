@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.identity.UserId;
 
 import java.util.Optional;
 
@@ -25,6 +26,11 @@ public class DeleteComment {
     }
 
     public Result execute(String memeId, String commentId, String caller, boolean callerIsModerator) {
+        return execute(memeId, commentId, caller, Optional.empty(), callerIsModerator);
+    }
+
+    public Result execute(String memeId, String commentId, String caller, Optional<UserId> callerId,
+                          boolean callerIsModerator) {
         // the address is a comment IN a thread, so the thread is part of it: a comment hanging
         // under another meme is not at this address, and confirming a deletion against it would
         // have every cache, log and audit record the wrong conversation
@@ -33,7 +39,7 @@ public class DeleteComment {
         if (comment.isEmpty()) {
             return new Result(Status.NO_SUCH_COMMENT, false);
         }
-        boolean isAuthor = comment.get().author().equals(caller);
+        boolean isAuthor = comment.get().isAuthoredBy(caller, callerId);
         if (!isAuthor && !callerIsModerator) {
             return new Result(Status.FORBIDDEN, false);
         }
