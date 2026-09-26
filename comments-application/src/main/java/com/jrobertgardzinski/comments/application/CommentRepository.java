@@ -26,6 +26,7 @@ public interface CommentRepository {
 
     void deleteByMeme(String memeId);
 
-    /** Replace one comment's author (account deletion may keep the text, never the identity). */
+    /** Replace one comment's author; the author id goes too, so kept content is not groupable by it. */
+
     void reassignAuthor(String commentId, String newAuthor);
 }

@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentModeration;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.application.CommentVotes;
@@ -208,6 +210,19 @@ class JdbcPersistenceTest {
 
         assertThrows(DuplicateKeyException.class,
                 () -> alwaysDuplicate.setHidden(commentId, true));
+    }
+
+    @Test
+    @DisplayName("anonymising drops the author id with the address")
+    void anonymising_drops_the_author_id() {
+        String id = UUID.randomUUID().toString();
+        comments.save(new Comment(id, UUID.randomUUID().toString(), "leaver@example.com",
+                Optional.of(UserId.random()), "under test", CommentStatus.ACTIVE, null));
+
+        comments.reassignAuthor(id, com.jrobertgardzinski.comments.domain.DeletedAccount.AUTHOR);
+
+        assertEquals(Optional.empty(), comments.find(id).orElseThrow().authorId(),
+                "kept content of a closed account must not be groupable by its old id");
     }
 
     private String savedComment() {

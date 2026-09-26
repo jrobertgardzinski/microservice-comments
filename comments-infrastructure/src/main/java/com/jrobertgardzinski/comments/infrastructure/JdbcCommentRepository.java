@@ -81,7 +81,8 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public void reassignAuthor(String commentId, String newAuthor) {
-        jdbc.sql("UPDATE comments SET author = ? WHERE id = ?").params(newAuthor, commentId).update();
+        // the id goes with the old author: kept content of a closed account is not groupable by it
+        jdbc.sql("UPDATE comments SET author = ?, author_id = NULL WHERE id = ?").params(newAuthor, commentId).update();
     }
 
     private Comment toComment(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
