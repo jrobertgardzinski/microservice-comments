@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * a real row. So the tests get a real one, and it costs the twenty lines below.
  *
  * <p>The table is created by executing {@link OutboxTable#ddl()} — the same string
- * {@code V4__comment_events_outbox.sql} was copied from, so a test cannot pass against a shape the
+ * {@code comment_events_outbox} in {@code V1__schema.sql} was copied from, so a test cannot pass against a shape the
  * migration does not produce. PostgreSQL mode with lower-cased identifiers, matching both the real
  * Postgres and the H2 the Spring suites run on.
  */

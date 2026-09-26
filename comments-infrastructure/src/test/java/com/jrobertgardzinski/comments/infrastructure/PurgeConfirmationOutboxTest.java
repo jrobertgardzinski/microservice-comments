@@ -35,7 +35,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * The saga's confirmation now that it rides the outbox — against a REAL table (the library's own DDL,
- * which is the string {@code V4__comment_events_outbox.sql} was copied from) and a REAL transaction
+ * which is the string {@code comment_events_outbox} in {@code V1__schema.sql} was copied from) and a REAL transaction
  * manager, because every property worth having here is a property of a row and a commit.
  *
  * <p>What the old {@code kafka.send(...).whenComplete(log)} could not promise: Spring Kafka commits the
