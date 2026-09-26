@@ -1,6 +1,5 @@
 package com.jrobertgardzinski.comments.application;
 
-import java.util.Optional;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 
@@ -27,12 +26,8 @@ public class RestoreUserComments {
         this.erasure = erasure;
     }
 
-    public void execute(String author) {
-        execute(author, Optional.empty());
-    }
-
-    public void execute(String author, Optional<UserId> authorId) {
-        for (Comment comment : erasure.pendingOf(author, authorId)) {
+    public void execute(UserId author) {
+        for (Comment comment : erasure.pendingOf(author)) {
             erasure.store(comment.restore());
         }
     }

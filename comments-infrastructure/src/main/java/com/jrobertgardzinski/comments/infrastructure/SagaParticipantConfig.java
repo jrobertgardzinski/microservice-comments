@@ -69,7 +69,7 @@ class SagaParticipantConfig {
     /**
      * The single error handler Spring Boot wires into the listener container factory, so it governs
      * ALL THREE listeners of this service: the saga's purge commands, the cascade's MEME_DELETED hop
-     * and the address changes {@link SecurityEventsListener} re-keys on.
+     * and the address changes the (since retired) address-change listener re-keys on.
      * The budget's reasoning is the saga's timeline (see {@link SagaRetryBudget}), and it fits the
      * third listener for the same reason as the first — a rename that cannot reach the database has to
      * be retried, not committed over. It applies to the

@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.DeletedAccount;
@@ -21,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Epic("Use case")
 @Feature("Purge and thread cascade")
 class PurgeAndCascadeTest {
+
+    private static final UserId LEAVER = UserId.random();
 
     private final List<Comment> comments = new ArrayList<>();
     private final Map<String, Map<String, VoteDirection>> votes = new HashMap<>();
@@ -99,14 +103,14 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("default purge keeps texts as 'deleted account'; KEEP_POPULAR decides by score")
     void purge_honours_the_rules() {
-        comments.add(new Comment("praised", "m1", "leaver@example.com", "keeper"));
-        comments.add(new Comment("ignored", "m1", "leaver@example.com", "goner"));
+        comments.add(new Comment("praised", "m1", "leaver@example.com", Optional.of(LEAVER), "keeper", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("ignored", "m1", "leaver@example.com", Optional.of(LEAVER), "goner", CommentStatus.ACTIVE, null));
         votes.put("praised", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
 
         // the saga in full: the reversible mark, then the orchestrator's closure
-        mark.execute("leaver@example.com");
+        mark.execute(LEAVER);
         new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
-                .execute("leaver@example.com", Optional.of(new PurgeRule.KeepPopularAnonymized(1)));
+                .execute(LEAVER, Optional.of(new PurgeRule.KeepPopularAnonymized(1)));
 
         assertEquals(1, comments.size());
         assertEquals("keeper", comments.get(0).text());
@@ -119,15 +123,15 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("a comment kept only by the leaver's own vote is not what the community liked")
     void the_leavers_own_votes_do_not_count_towards_the_threshold() {
-        comments.add(new Comment("self-liked", "m1", "leaver@example.com", "praise from the author"));
+        comments.add(new Comment("self-liked", "m1", "leaver@example.com", Optional.of(LEAVER), "praise from the author", CommentStatus.ACTIVE, null));
         // two votes, one of them the leaver's own — and his is leaving with him, so the community's
         // verdict on this comment is ONE. Counting his made the threshold of two look met.
         votes.put("self-liked", new HashMap<>(Map.of(
-                "leaver@example.com", VoteDirection.UP, "fan@example.com", VoteDirection.UP)));
+                LEAVER.toString(), VoteDirection.UP, "fan@example.com", VoteDirection.UP)));
 
-        mark.execute("leaver@example.com");
+        mark.execute(LEAVER);
         new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
-                .execute("leaver@example.com", Optional.of(new PurgeRule.KeepPopularAnonymized(2)));
+                .execute(LEAVER, Optional.of(new PurgeRule.KeepPopularAnonymized(2)));
 
         assertTrue(comments.isEmpty(),
                 "a comment kept only by the leaver's own vote is not what the community liked");
@@ -136,10 +140,10 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("the mark hides the leaver's comments and destroys nothing")
     void the_mark_is_reversible() {
-        comments.add(new Comment("reserved", "m1", "leaver@example.com", "still here"));
+        comments.add(new Comment("reserved", "m1", "leaver@example.com", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
         votes.put("reserved", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
 
-        mark.execute("leaver@example.com");
+        mark.execute(LEAVER);
 
         assertTrue(erasure.isMarked("reserved"), "out of the thread");
         assertEquals(1, comments.size(), "...and still stored");
@@ -149,10 +153,10 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("the compensation puts the conversation back exactly as it was")
     void restore_undoes_the_mark() {
-        comments.add(new Comment("reserved", "m1", "leaver@example.com", "still here"));
-        mark.execute("leaver@example.com");
+        comments.add(new Comment("reserved", "m1", "leaver@example.com", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
+        mark.execute(LEAVER);
 
-        restore.execute("leaver@example.com");
+        restore.execute(LEAVER);
 
         assertTrue(!erasure.isMarked("reserved"));
         assertEquals("leaver@example.com", comments.get(0).author());
@@ -162,10 +166,10 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("a closure that arrives without a mark erases nothing")
     void the_closure_only_acts_on_what_the_mark_reserved() {
-        comments.add(new Comment("never-marked", "m1", "leaver@example.com", "untouched"));
+        comments.add(new Comment("never-marked", "m1", "leaver@example.com", Optional.of(LEAVER), "untouched", CommentStatus.ACTIVE, null));
 
         new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.Delete())
-                .execute("leaver@example.com", Optional.empty());
+                .execute(LEAVER, Optional.empty());
 
         assertEquals(1, comments.size(),
                 "the erasure acts on the reservation, never on 'everything by that author'");

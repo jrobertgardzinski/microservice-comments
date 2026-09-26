@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentErasure;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.application.CommentVotes;
@@ -67,6 +68,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class MarkedCommentRaceTest {
 
     private static final String LEAVER = "leaver@example.com";
+    private static final UserId LEAVER_ID = UserId.random();
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:18-alpine");
@@ -101,10 +103,10 @@ class MarkedCommentRaceTest {
         // c1 is the leaver's own comment (oldest, so DeleteThread's allUnder visits it first);
         // c2 is somebody else's reply. A fan liked c1; the leaver liked c2 — the cross-vote that
         // puts the two transactions' lock order in opposition.
-        String c1 = savedComment(meme, LEAVER, Instant.parse("2026-01-01T10:00:00Z"));
-        String c2 = savedComment(meme, "bob@example.com", Instant.parse("2026-01-01T10:00:01Z"));
+        String c1 = savedComment(meme, LEAVER, LEAVER_ID, Instant.parse("2026-01-01T10:00:00Z"));
+        String c2 = savedComment(meme, "bob@example.com", UserId.random(), Instant.parse("2026-01-01T10:00:01Z"));
         castVote(c1, "fan@example.com", "UP");
-        castVote(c2, LEAVER, "UP");
+        castVote(c2, LEAVER_ID.toString(), "UP");
         markForErasure(c1);
 
         CountDownLatch purgeHoldsItsOwnVote = new CountDownLatch(1);
@@ -148,7 +150,7 @@ class MarkedCommentRaceTest {
         try {
             Future<Throwable> purgeOutcome = pool.submit(() -> {
                 try {
-                    purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty(), Optional.empty()));
+                    purgeTx.executeWithoutResult(status -> purge.execute(LEAVER_ID, Optional.empty()));
                     return null;
                 } catch (RuntimeException raised) {
                     return raised;
@@ -182,7 +184,7 @@ class MarkedCommentRaceTest {
             // carrier would (PurgeCommandsListener / MemesEventsListener's error handler backs off
             // and redelivers), and the retry finds nothing left undone
             if (purgeFailure != null) {
-                purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty(), Optional.empty()));
+                purgeTx.executeWithoutResult(status -> purge.execute(LEAVER_ID, Optional.empty()));
             } else {
                 cascadeTx.executeWithoutResult(status -> cascade.execute(meme));
             }
@@ -208,11 +210,11 @@ class MarkedCommentRaceTest {
         }
     }
 
-    private static String savedComment(String memeId, String author, Instant createdAt) {
+    private static String savedComment(String memeId, String author, UserId authorId, Instant createdAt) {
         String id = UUID.randomUUID().toString();
-        jdbc.sql("INSERT INTO comments (id, meme_id, author, content, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?)")
-                .params(id, memeId, author, "under race test", Timestamp.from(createdAt))
+        jdbc.sql("INSERT INTO comments (id, meme_id, author, author_id, content, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)")
+                .params(id, memeId, author, authorId.value(), "under race test", Timestamp.from(createdAt))
                 .update();
         return id;
     }

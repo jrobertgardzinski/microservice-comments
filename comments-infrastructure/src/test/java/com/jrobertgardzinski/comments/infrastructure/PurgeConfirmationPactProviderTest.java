@@ -71,7 +71,7 @@ class PurgeConfirmationPactProviderTest {
                 new ObjectMapper(), NoTransactions.template());
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\","
                 + "\"sagaId\":\"7d9f9e2a-1f0a-4f6e-9a1b-2c3d4e5f6a7b\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f\"}", null);
         return confirmations.captured().payload();
     }
 }

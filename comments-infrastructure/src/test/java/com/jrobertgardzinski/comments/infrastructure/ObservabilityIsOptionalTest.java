@@ -107,13 +107,6 @@ class ObservabilityIsOptionalTest {
     private static CommentErasure holding(Instant markedAt) {
         Comment marked = new Comment("c1", "m1", "leaver@example.com", "text").markForErasure(markedAt);
         return new CommentErasure() {
-            public List<Comment> activeOf(String author) {
-                return List.of();
-            }
-
-            public List<Comment> pendingOf(String author) {
-                return List.of();
-            }
 
             public List<Comment> activeOf(com.jrobertgardzinski.identity.UserId author) {
                 return List.of();

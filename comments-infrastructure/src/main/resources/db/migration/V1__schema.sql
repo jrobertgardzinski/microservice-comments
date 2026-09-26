@@ -4,8 +4,8 @@
 CREATE TABLE comments (
     id                    VARCHAR(36)   PRIMARY KEY,
     meme_id               VARCHAR(36)   NOT NULL,
-    author                VARCHAR(255)  NOT NULL,      -- the address, on its way out
-    author_id             UUID,                        -- the stable identity; null only for rows the backfill missed
+    author                VARCHAR(255)  NOT NULL,      -- the address as an attribute: the placeholder once anonymised, never a key
+    author_id             UUID,                        -- the stable identity, the key; null once the row is anonymised
     content               VARCHAR(2000) NOT NULL,
     created_at            TIMESTAMP     NOT NULL,
     -- the account-closure saga's reversible mark: out of every thread, destroyed by nothing but the closure
@@ -15,7 +15,6 @@ CREATE TABLE comments (
     CONSTRAINT ck_comments_erasure_mark CHECK ((status = 'PENDING_ERASURE') = (marked_for_erasure_at IS NOT NULL))
 );
 CREATE INDEX idx_comments_meme ON comments (meme_id);
-CREATE INDEX idx_comments_author ON comments (author);
 CREATE INDEX idx_comments_author_id ON comments (author_id);
 CREATE INDEX idx_comments_pending_erasure ON comments (status, marked_for_erasure_at);
 
@@ -27,7 +26,7 @@ CREATE VIEW active_comments AS
 
 CREATE TABLE comment_votes (
     comment_id VARCHAR(36)  NOT NULL,
-    voter      VARCHAR(255) NOT NULL,
+    voter      VARCHAR(255) NOT NULL,   -- the voter's id, in its wire form
     direction  VARCHAR(4)   NOT NULL,
     PRIMARY KEY (comment_id, voter),
     CONSTRAINT fk_comment_votes_comment FOREIGN KEY (comment_id) REFERENCES comments (id) ON DELETE CASCADE

@@ -47,23 +47,23 @@ public class AccountErasureSteps {
     // scenario that sets it aside and the scenario that starts from it.
     @Given("the USER's things are set aside")
     public void theUsersThingsAreSetAside() {
-        setAside.execute(TestAuthConfig.SIGNED_IN_USER);
+        setAside.execute(TestAuthConfig.SIGNED_IN_USER_ID);
     }
 
     @When("the decision is taken back")
     public void theDecisionIsTakenBack() {
-        takeBack.execute(TestAuthConfig.SIGNED_IN_USER);
+        takeBack.execute(TestAuthConfig.SIGNED_IN_USER_ID);
     }
 
     /** No rule stated means the deployment's own — which keeps the conversation and drops the name. */
     @When("the decision is made final")
     public void theDecisionIsMadeFinal() {
-        makeFinal.execute(TestAuthConfig.SIGNED_IN_USER, Optional.empty());
+        makeFinal.execute(TestAuthConfig.SIGNED_IN_USER_ID, Optional.empty());
     }
 
     @When("the decision is made final, erasing the words themselves")
     public void theDecisionIsMadeFinalErasingTheWords() {
-        makeFinal.execute(TestAuthConfig.SIGNED_IN_USER, Optional.of(new PurgeRule.Delete()));
+        makeFinal.execute(TestAuthConfig.SIGNED_IN_USER_ID, Optional.of(new PurgeRule.Delete()));
     }
 
     @Then("the THREAD of the known MEME shows {int} COMMENT signed {string}")

@@ -74,7 +74,7 @@ class CommentController {
     @PostMapping
     ResponseEntity<?> add(@PathVariable("memeId") String memeId,
                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String author,
-                          @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID, required = false)
+                          @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
                           com.jrobertgardzinski.identity.UserId authorId,
                           @RequestBody CommentRequest request) {
         if (request.text() == null || request.text().isBlank()) {
@@ -88,7 +88,7 @@ class CommentController {
             return ResponseEntity.status(429).header("Retry-After", "60")
                     .body(Map.of("status", "RATE_LIMITED", "detail", "you are commenting too fast"));
         }
-        return addComment.execute(memeId, author, Optional.ofNullable(authorId), request.text())
+        return addComment.execute(memeId, author, Optional.of(authorId), request.text())
                 .<ResponseEntity<?>>map(comment ->
                         ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", comment.id())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -98,10 +98,8 @@ class CommentController {
     List<Map<String, Object>> list(@PathVariable("memeId") String memeId,
                                    @RequestParam(name = "page", defaultValue = "0") int page,
                                    @RequestParam(name = "size", defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
-                                   @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER,
-                                           required = false) String viewer,
                                    @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID,
-                                           required = false) com.jrobertgardzinski.identity.UserId viewerId) {
+                                           required = false) com.jrobertgardzinski.identity.UserId viewer) {
         int limit = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         // long arithmetic on purpose: page * limit in ints overflows for an absurd page number,
         // and a NEGATIVE offset reaches the database as a broken statement (a bare 500) instead
@@ -110,7 +108,7 @@ class CommentController {
         // and both the cap and the number it stands for list nothing. (The gallery's own listing
         // in microservice-memes takes the same care, 1c86a5a.)
         int offset = (int) Math.min((long) Math.max(0, page) * limit, Integer.MAX_VALUE);
-        return listComments.execute(memeId, Optional.ofNullable(viewer), Optional.ofNullable(viewerId), offset, limit)
+        return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
                 .comments().stream().map(this::toBody).toList();
     }
 
@@ -163,13 +161,15 @@ class CommentController {
     @PostMapping("/{commentId}/votes")
     ResponseEntity<?> vote(@PathVariable("memeId") String memeId,
                            @PathVariable("commentId") String commentId,
-                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String voter,
+                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
+                           com.jrobertgardzinski.identity.UserId voter,
                            @RequestBody VoteRequest request) {
         Optional<VoteDirection> direction = parseDirection(request);
         if (direction.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("status", "INVALID_DIRECTION"));
         }
-        Optional<VoteTally> tally = voteOnComment.execute(memeId, commentId, voter, direction.get());
+        // the ballot is keyed by the voter's id, in its wire form
+        Optional<VoteTally> tally = voteOnComment.execute(memeId, commentId, voter.toString(), direction.get());
         if (tally.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -183,14 +183,12 @@ class CommentController {
     @DeleteMapping("/{commentId}")
     ResponseEntity<?> delete(@PathVariable("memeId") String memeId,
                              @PathVariable("commentId") String commentId,
-                             @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String caller,
-                             @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID,
-                                     required = false) com.jrobertgardzinski.identity.UserId callerId,
+                             @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
+                             com.jrobertgardzinski.identity.UserId caller,
                              @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                      required = false) java.util.Set<String> roles) {
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller,
-                Optional.ofNullable(callerId), moderator);
+        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller, moderator);
         return switch (result.status()) {
             case DELETED -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
                     "by", result.byModerator() ? "MODERATOR" : "AUTHOR"));
@@ -200,30 +198,16 @@ class CommentController {
         };
     }
 
-    /**
-     * The public face of an author: first character, then {@code ***}, then the domain —
-     * enough for "same person across the thread", no full e-mail for scrapers. Internally
-     * (authorisation, purges) the full e-mail still flows; only this representation masks.
-     * Non-e-mail authors (the "deleted account" placeholder) pass through untouched.
-     */
-    /**
-     * The name security shows for the author's id; a row that predates the id still shows its
-     * masked address. An id security no longer knows is a deleted account.
-     */
+    /** The name security shows for the author's id; a row without one, or with one security no longer knows, is a deleted account. */
     private String nameOf(Comment comment) {
         return comment.authorId()
                 .map(id -> authors.namesOf(java.util.List.of(id)).getOrDefault(id,
-                        new com.jrobertgardzinski.authors.AuthorName("deleted account")).display())
-                .orElseGet(() -> maskAuthor(comment.author()));
+                        new com.jrobertgardzinski.authors.AuthorName(DELETED_ACCOUNT)).display())
+                .orElse(DELETED_ACCOUNT);
     }
 
-    private static String maskAuthor(String author) {
-        int at = author.indexOf('@');
-        if (at <= 0) {
-            return author;
-        }
-        return author.charAt(0) + "***" + author.substring(at);
-    }
+    private static final String DELETED_ACCOUNT = "deleted account";
+
 
     private static Optional<VoteDirection> parseDirection(VoteRequest request) {
         try {

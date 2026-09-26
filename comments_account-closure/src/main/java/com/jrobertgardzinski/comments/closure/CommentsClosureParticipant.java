@@ -59,25 +59,24 @@ public final class CommentsClosureParticipant {
         String sagaId = command.sagaId();
         if (!command.isAddressed()) {
             // confirming would advance the saga on a deletion that never happened
-            LOG.warn("dropping {} without an email (saga {})", type, sagaId);
+            LOG.warn("dropping {} without a user id (saga {})", type, sagaId);
             return new ClosureOutcome.Unaddressed(type);
         }
-        String email = command.email();   // PII: never logged
-        Optional<UserId> leaver = command.userId();
+        UserId leaver = command.userId();
         return switch (type) {
             case MARK -> {
-                int reserved = markAndConfirm(sagaId, email, leaver);
+                int reserved = markAndConfirm(sagaId, leaver);
                 LOG.info("marked {} of one leaver's comments for erasure (saga {})", reserved, sagaId);
                 yield new ClosureOutcome.Reserved(reserved);
             }
             case ERASE -> {
                 Optional<PurgeRule> rule = requestedRule(command);   // pure reading, kept outside the step
-                atomically.run(() -> purgeUserComments.execute(email, leaver, rule));
+                atomically.run(() -> purgeUserComments.execute(leaver, rule));
                 LOG.info("erased one leaver's marked comments on the saga's closure (saga {})", sagaId);
                 yield new ClosureOutcome.Erased();
             }
             case RESTORE -> {
-                atomically.run(() -> restoreUserComments.execute(email, leaver));
+                atomically.run(() -> restoreUserComments.execute(leaver));
                 LOG.info("restored one leaver's comments: the saga compensated (saga {})", sagaId);
                 yield new ClosureOutcome.Restored();
             }
@@ -86,11 +85,11 @@ public final class CommentsClosureParticipant {
     }
 
     /** The confirmation is made INSIDE the unit of work: hidden comments with no word owed is the failure mode. */
-    private int markAndConfirm(String sagaId, String email, Optional<UserId> leaver) {
+    private int markAndConfirm(String sagaId, UserId leaver) {
         AtomicInteger reserved = new AtomicInteger();
         atomically.run(() -> {
-            int marked = markForErasure.execute(email, leaver);
-            confirmations.confirm(sagaId, email, marked);
+            int marked = markForErasure.execute(leaver);
+            confirmations.confirm(sagaId, leaver, marked);
             reserved.set(marked);
         });
         if (reserved.get() == 0) {

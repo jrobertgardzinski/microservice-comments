@@ -25,12 +25,7 @@ public class DeleteComment {
         this.votes = votes;
     }
 
-    public Result execute(String memeId, String commentId, String caller, boolean callerIsModerator) {
-        return execute(memeId, commentId, caller, Optional.empty(), callerIsModerator);
-    }
-
-    public Result execute(String memeId, String commentId, String caller, Optional<UserId> callerId,
-                          boolean callerIsModerator) {
+    public Result execute(String memeId, String commentId, UserId caller, boolean callerIsModerator) {
         // the address is a comment IN a thread, so the thread is part of it: a comment hanging
         // under another meme is not at this address, and confirming a deletion against it would
         // have every cache, log and audit record the wrong conversation
@@ -39,7 +34,7 @@ public class DeleteComment {
         if (comment.isEmpty()) {
             return new Result(Status.NO_SUCH_COMMENT, false);
         }
-        boolean isAuthor = comment.get().isAuthoredBy(caller, callerId);
+        boolean isAuthor = comment.get().isAuthoredBy(caller);
         if (!isAuthor && !callerIsModerator) {
             return new Result(Status.FORBIDDEN, false);
         }

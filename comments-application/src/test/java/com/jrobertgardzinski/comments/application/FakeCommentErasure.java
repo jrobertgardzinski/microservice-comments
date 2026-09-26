@@ -33,15 +33,7 @@ public class FakeCommentErasure implements CommentErasure {
         this.comments = comments;
     }
 
-    @Override
-    public List<Comment> activeOf(String author) {
-        return byAuthor(author, false);
-    }
 
-    @Override
-    public List<Comment> pendingOf(String author) {
-        return byAuthor(author, true);
-    }
 
     @Override
     public List<Comment> activeOf(UserId author) {
@@ -63,15 +55,6 @@ public class FakeCommentErasure implements CommentErasure {
         return found;
     }
 
-    private List<Comment> byAuthor(String author, boolean marked) {
-        List<Comment> found = new ArrayList<>();
-        for (Comment comment : comments) {
-            if (comment.author().equals(author) && marks.containsKey(comment.id()) == marked) {
-                found.add(withMark(comment));
-            }
-        }
-        return found;
-    }
 
     @Override
     public void store(Comment state) {

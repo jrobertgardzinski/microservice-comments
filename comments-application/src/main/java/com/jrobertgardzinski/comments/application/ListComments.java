@@ -40,21 +40,16 @@ public class ListComments {
         this.commentVotes = commentVotes;
     }
 
-    public Page execute(String memeId, Optional<String> viewer, int offset, int limit) {
-        return execute(memeId, viewer, Optional.empty(), offset, limit);
-    }
-
-    public Page execute(String memeId, Optional<String> viewer, Optional<UserId> viewerId, int offset,
-                        int limit) {
+    public Page execute(String memeId, Optional<UserId> viewer, int offset, int limit) {
         Set<String> hidden = moderation.hiddenIn(memeId);
         List<Comment> page = commentRepository.findByMeme(memeId, offset, limit);
-        Map<String, VoteTally> tallies = talliesOrNull(page, viewer);
+        Map<String, VoteTally> tallies = talliesOrNull(page, viewer.map(UserId::toString));
         List<CommentWithScore> comments = page.stream()
                 .map(comment -> new CommentWithScore(comment,
                         tallies == null ? null
                                 : tallies.getOrDefault(comment.id(), new VoteTally(0, Optional.empty())),
                         hidden.contains(comment.id()),
-                        viewer.map(email -> comment.isAuthoredBy(email, viewerId)).orElse(false)))
+                        viewer.map(comment::isAuthoredBy).orElse(false)))
                 .toList();
         return new Page(comments, offset, limit);
     }

@@ -1,45 +1,31 @@
 package com.jrobertgardzinski.comments.application;
 
-import java.util.Optional;
-import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.identity.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What {@link CommentErasure} promises, stated once and asked of EVERY implementation — the JDBC
- * adapter the service runs on, and each stand-in a test suite uses in its place.
+ * What {@link CommentErasure} promises, asked of EVERY implementation — the JDBC adapter the
+ * service runs on and each stand-in used in its place. A stand-in that drifts does not fail; it
+ * makes a green suite say something about a service that does not exist.
  *
- * <p>A stand-in that drifts from the adapter does not fail: it makes a green suite say something
- * about a service that does not exist. This estate met that twice in one afternoon. A hand-built
- * confirmation lost a field, and three of the stand-ins written that day answered
- * {@link CommentErasure#pendingSince} inclusively where all three real adapters ask
- * {@code marked_for_erasure_at < ?} — one row's difference, invisible, and nothing would ever have
- * reported it. A contract subclassed by both sides is the cheapest thing that does.
- *
- * <p>Two seams, both deliberately narrow: how this implementation is reached, and how a comment comes
- * to exist in it. Everything else is asked through the port, because a seam that reads the rows
- * some other way could lie in the same breath as the thing it is checking.
+ * <p>Fresh ids per test method, because one implementation is a database other suites share.
  */
 public abstract class CommentErasureContractTest {
 
     private static final Instant NOON = Instant.parse("2026-09-24T12:00:00Z");
 
-    /**
-     * Fresh names per test method, because one of the implementations is a real database that
-     * other suites share — and this estate has already been bitten by a shared H2 plus surefire's
-     * default ordering. JUnit builds a new instance per method, so nothing here can meet a row
-     * another test left behind.
-     */
     private final String run = java.util.UUID.randomUUID().toString().substring(0, 8);
-    private final String alice = "alice+" + run + "@example.com";
-    private final String bob = "bob+" + run + "@example.com";
+    private final UserId alice = UserId.random();
+    private final UserId bob = UserId.random();
     private final String first = "c1-" + run;
     private final String second = "c2-" + run;
     private final String third = "c3-" + run;
@@ -49,36 +35,8 @@ public abstract class CommentErasureContractTest {
     /** Put an ACTIVE comment in, however this implementation stores one. */
     protected abstract void givenActiveComment(String id, String author, Optional<UserId> authorId);
 
-    private void givenActiveComment(String id, String author) {
-        givenActiveComment(id, author, Optional.empty());
-    }
-
-    @Test
-    @DisplayName("by id: the rows carrying that id, whatever address they were written under")
-    protected void rows_are_found_by_the_authors_id() {
-        UserId aliceId = UserId.random();
-        givenActiveComment(first, alice, Optional.of(aliceId));
-        givenActiveComment(second, "old+" + run + "@example.com", Optional.of(aliceId));
-        givenActiveComment(third, alice, Optional.of(UserId.random()));
-
-        assertEquals(2, erasure().activeOf(aliceId).size());
-        erasure().store(erasure().activeOf(aliceId).get(0).markForErasure(NOON));
-        assertEquals(1, erasure().pendingOf(aliceId).size());
-        assertEquals(1, erasure().activeOf(aliceId).size());
-    }
-
-    @Test
-    @DisplayName("during the dual period the leaver is their id plus their id-less rows under the address")
-    protected void the_leaver_is_the_id_plus_the_rows_without_one() {
-        UserId aliceId = UserId.random();
-        givenActiveComment(first, "old+" + run + "@example.com", Optional.of(aliceId));
-        givenActiveComment(second, alice, Optional.empty());
-        givenActiveComment(third, alice, Optional.of(UserId.random()));
-
-        assertEquals(2, erasure().activeOf(alice, Optional.of(aliceId)).size(),
-                "the same address under another id is somebody else's");
-        assertEquals(2, erasure().activeOf(alice, Optional.empty()).size(),
-                "a closure without an id still goes by the address alone");
+    private void givenActiveComment(String id, UserId author) {
+        givenActiveComment(id, "someone+" + run + "@example.com", Optional.of(author));
     }
 
     private Comment theOnly(List<Comment> found) {
@@ -103,6 +61,16 @@ public abstract class CommentErasureContractTest {
     }
 
     @Test
+    @DisplayName("the id is the key: the address a row was written under plays no part")
+    protected void rows_are_keyed_by_the_authors_id() {
+        givenActiveComment(first, "old+" + run + "@example.com", Optional.of(alice));
+        givenActiveComment(second, "new+" + run + "@example.com", Optional.of(alice));
+        givenActiveComment(third, "old+" + run + "@example.com", Optional.empty());
+
+        assertEquals(2, erasure().activeOf(alice).size(), "both addresses, one person");
+    }
+
+    @Test
     @DisplayName("a restored comment is active again and carries no mark")
     protected void restoring_puts_it_back() {
         givenActiveComment(first, alice);
@@ -121,13 +89,13 @@ public abstract class CommentErasureContractTest {
         givenActiveComment(first, alice);
         Comment held = theOnly(erasure().activeOf(alice));
 
-        // a stale copy carrying somebody else's name — which is what the closure hands over a line
-        // after it has anonymised the row. If this port wrote the author back, the anonymisation
-        // would be undone by the very next call, and the leaver's name would return to the thread
+        // a stale copy carrying somebody else's identity — which is what the closure hands over a
+        // line after it has anonymised the row. If this port wrote the author back, the
+        // anonymisation would be undone by the very next call
         erasure().store(new Comment(held.id(), held.memeId(), "somebody.else+" + run + "@example.com",
-                held.text(), held.markForErasure(NOON).status(), NOON));
+                Optional.of(bob), held.text(), held.markForErasure(NOON).status(), NOON));
 
-        assertEquals(List.of(), erasure().pendingOf("somebody.else+" + run + "@example.com"),
+        assertEquals(List.of(), erasure().pendingOf(bob),
                 "the author moved: this port wrote a column that is not its own");
         assertEquals(first, theOnly(erasure().pendingOf(alice)).id());
     }

@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.closure.ClosureConfirmation;
 import com.jrobertgardzinski.closure.ClosureMessages;
@@ -61,7 +62,7 @@ class PurgeConfirmations {
     }
 
     /** Announce the confirmation in the caller's transaction — see the class javadoc. */
-    void confirm(String sagaId, String leaver, int reserved) {
+    void confirm(String sagaId, UserId leaver, int reserved) {
         outbox.announce(confirmationOf(sagaId, leaver, reserved));
     }
 
@@ -101,7 +102,7 @@ class PurgeConfirmations {
      * <p>Package-private and free of the outbox so the contract tests can build the real payload
      * without a database — the shape is what they verify, and a table is not part of the shape.
      */
-    OutboxEvent confirmationOf(String sagaId, String leaver, int reserved) {
+    OutboxEvent confirmationOf(String sagaId, UserId leaver, int reserved) {
         String payload;
         try {
             // The FIELD SET is the agreement's, not this service's: ClosureConfirmation knows
@@ -145,9 +146,7 @@ class PurgeConfirmations {
      * {@code nameUUIDFromBytes} idiom the orchestrator uses for its own re-published outcomes: never
      * blank, because the outbox refuses a blank key, and never the address itself.
      */
-    private static String keyFor(String sagaId, String leaver) {
-        return sagaId != null && !sagaId.isBlank()
-                ? sagaId
-                : UUID.nameUUIDFromBytes(leaver.getBytes(StandardCharsets.UTF_8)).toString();
+    private static String keyFor(String sagaId, UserId leaver) {
+        return sagaId != null && !sagaId.isBlank() ? sagaId : leaver.toString();
     }
 }

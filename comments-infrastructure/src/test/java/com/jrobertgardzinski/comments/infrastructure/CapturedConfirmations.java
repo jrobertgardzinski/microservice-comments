@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.outbox.OutboxEvent;
 
@@ -23,7 +24,7 @@ class CapturedConfirmations extends PurgeConfirmations {
     }
 
     @Override
-    void confirm(String sagaId, String leaver, int reserved) {
+    void confirm(String sagaId, UserId leaver, int reserved) {
         captured = confirmationOf(sagaId, leaver, reserved);
     }
 

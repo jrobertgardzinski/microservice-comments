@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.application.CommentVotes;
 import com.jrobertgardzinski.comments.application.DeleteComment;
@@ -147,14 +149,15 @@ class TransactionalDecoratorsTest {
     void delete_comment_is_atomic() {
         String commentId = UUID.randomUUID().toString();
         String memeId = UUID.randomUUID().toString();
-        repository.save(new Comment(commentId, memeId,
-                "author@example.com", "doomed, but atomically"));
+        UserId author = UserId.random();
+        repository.save(new Comment(commentId, memeId, "author@example.com", Optional.of(author),
+                "doomed, but atomically", CommentStatus.ACTIVE, null));
         votes.cast(commentId, "fan@example.com", VoteDirection.UP);
         votes.cast(commentId, "hater@example.com", VoteDirection.DOWN);
 
         FailingPorts.failDeleteOf.add(commentId);
         assertThrows(DataAccessResourceFailureException.class,
-                () -> deleteComment.execute(memeId, commentId, "author@example.com", false));
+                () -> deleteComment.execute(memeId, commentId, author, false));
 
         // the vote purge ran first and must have been rolled back with the failed delete —
         // without the decorator the votes would be gone while the comment survived
@@ -166,14 +169,17 @@ class TransactionalDecoratorsTest {
     @DisplayName("PurgeUserComments: a crash on the final voter purge rolls the anonymisation back")
     void purge_user_comments_is_atomic() {
         String leaver = "leaver-" + UUID.randomUUID() + "@example.com";
+        UserId leaverId = UserId.random();
         String first = UUID.randomUUID().toString();
         String second = UUID.randomUUID().toString();
-        repository.save(new Comment(first, UUID.randomUUID().toString(), leaver, "one"));
-        repository.save(new Comment(second, UUID.randomUUID().toString(), leaver, "two"));
+        repository.save(new Comment(first, UUID.randomUUID().toString(), leaver, Optional.of(leaverId), "one",
+                CommentStatus.ACTIVE, null));
+        repository.save(new Comment(second, UUID.randomUUID().toString(), leaver, Optional.of(leaverId), "two",
+                CommentStatus.ACTIVE, null));
 
-        FailingPorts.failPurgeVoterOf.add(leaver);
+        FailingPorts.failPurgeVoterOf.add(leaverId.toString());
         assertThrows(DataAccessResourceFailureException.class,
-                () -> purgeUserComments.execute(leaver, Optional.empty()));
+                () -> purgeUserComments.execute(leaverId, Optional.empty()));
 
         // the default rule anonymised both comments before the crash; the rollback must have
         // restored the author — half an executed GDPR sweep is worse than a retried one

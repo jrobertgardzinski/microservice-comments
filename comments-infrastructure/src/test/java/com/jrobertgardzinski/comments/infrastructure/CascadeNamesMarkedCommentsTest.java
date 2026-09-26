@@ -56,7 +56,7 @@ class CascadeNamesMarkedCommentsTest {
     void a_marked_comment_is_reported_as_dropped() throws Exception {
         String leaversComment = comment(TestAuthConfig.VALID_TOKEN, "the leaver's remark");
         String somebodyElsesComment = comment(TestAuthConfig.SECOND_TOKEN, "bob's reply");
-        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER);
+        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER_ID);
 
         List<String> dropped = deleteThread.execute(TestAuthConfig.EXISTING_MEME);
 

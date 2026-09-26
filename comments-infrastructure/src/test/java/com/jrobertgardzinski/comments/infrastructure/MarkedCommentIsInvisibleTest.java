@@ -76,7 +76,7 @@ class MarkedCommentIsInvisibleTest {
     void the_thread_loses_only_the_leavers_comment() throws Exception {
         assertTrue(threadIds().contains(leaversComment), "the fixture starts from a visible comment");
 
-        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER);
+        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER_ID);
 
         assertFalse(threadIds().contains(leaversComment), "the leaver's comment is gone from the thread");
         assertTrue(threadIds().contains(somebodyElsesComment),
@@ -86,9 +86,9 @@ class MarkedCommentIsInvisibleTest {
     @Test
     @DisplayName("the compensation gives the comment back with its text, author and score")
     void restoring_gives_the_conversation_back() throws Exception {
-        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER);
+        markForErasure.execute(TestAuthConfig.SIGNED_IN_USER_ID);
 
-        restoreUserComments.execute(TestAuthConfig.SIGNED_IN_USER);
+        restoreUserComments.execute(TestAuthConfig.SIGNED_IN_USER_ID);
 
         JsonNode restored = thread().stream()
                 .filter(comment -> leaversComment.equals(comment.get("id").asText()))

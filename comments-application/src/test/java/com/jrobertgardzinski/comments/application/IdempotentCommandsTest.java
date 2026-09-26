@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
@@ -37,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 @Epic("Use case")
 @Feature("Idempotent commands")
 class IdempotentCommandsTest {
+
+    private static final UserId ALICE = UserId.random();
+    private static final UserId BOB = UserId.random();
 
     /** A fresh little world per run: two threads, three comments, some votes. */
     private static final class World {
@@ -88,9 +93,9 @@ class IdempotentCommandsTest {
         };
 
         World() {
-            comments.add(new Comment("c1", "m1", "alice@example.com", "first"));
-            comments.add(new Comment("c2", "m1", "bob@example.com", "second"));
-            comments.add(new Comment("c3", "m2", "alice@example.com", "elsewhere"));
+            comments.add(new Comment("c1", "m1", "alice@example.com", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null));
+            comments.add(new Comment("c2", "m1", "bob@example.com", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
+            comments.add(new Comment("c3", "m2", "alice@example.com", Optional.of(ALICE), "elsewhere", CommentStatus.ACTIVE, null));
             votes.put("c1", new HashMap<>(Map.of("bob@example.com", VoteDirection.UP)));
             votes.put("c3", new HashMap<>(Map.of("bob@example.com", VoteDirection.DOWN)));
         }
@@ -140,10 +145,10 @@ class IdempotentCommandsTest {
         Map<String, Consumer<World>> c = new LinkedHashMap<>();
         c.put("delete a comment (author's own)",
                 w -> new DeleteComment(w.repository, w.commentVotes)
-                        .execute("m1", "c1", "alice@example.com", false));
+                        .execute("m1", "c1", ALICE, false));
         c.put("delete a comment that is not there",
                 w -> new DeleteComment(w.repository, w.commentVotes)
-                        .execute("m1", "ghost", "alice@example.com", false));
+                        .execute("m1", "ghost", ALICE, false));
         c.put("delete a whole thread",
                 w -> new DeleteThread(w.repository, w.erasure, w.commentVotes).execute("m1"));
         // hiding was idempotent all along and simply was not enforced — three of six commands were
@@ -151,19 +156,19 @@ class IdempotentCommandsTest {
         c.put("hide a comment (moderator)",
                 w -> new HideComment(w.repository, w.moderation).execute("m1", "c1", true, true));
         c.put("mark a leaver's comments for erasure",
-                w -> new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com"));
+                w -> new MarkUserCommentsForErasure(w.erasure, CLOCK).execute(ALICE));
         c.put("compensate: mark, then restore",
                 w -> {
-                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com");
-                    new RestoreUserComments(w.erasure).execute("alice@example.com");
+                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute(ALICE);
+                    new RestoreUserComments(w.erasure).execute(ALICE);
                 });
         c.put("purge a leaver's comments (default rule)",
                 w -> {
                     // the whole saga, both phases: the closure erases what the mark reserved
-                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute("alice@example.com");
+                    new MarkUserCommentsForErasure(w.erasure, CLOCK).execute(ALICE);
                     new PurgeUserComments(w.repository, w.erasure, w.commentVotes,
                             new PurgeRule.AnonymizeAuthor())
-                            .execute("alice@example.com", Optional.empty());
+                            .execute(ALICE, Optional.empty());
                 });
         return c;
     }

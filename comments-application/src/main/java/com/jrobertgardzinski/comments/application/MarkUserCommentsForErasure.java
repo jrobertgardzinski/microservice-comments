@@ -1,6 +1,5 @@
 package com.jrobertgardzinski.comments.application;
 
-import java.util.Optional;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 
@@ -42,14 +41,10 @@ public class MarkUserCommentsForErasure {
     }
 
     /** Returns how many comments this run reserved — see the paragraph above on what zero means. */
-    public int execute(String author) {
-        return execute(author, Optional.empty());
-    }
-
-    public int execute(String author, Optional<UserId> authorId) {
+    public int execute(UserId author) {
         Instant at = Instant.now(clock);
         int reserved = 0;
-        for (Comment comment : erasure.activeOf(author, authorId)) {
+        for (Comment comment : erasure.activeOf(author)) {
             // the aggregate decides what "marked" means (including keeping the first instant on a
             // redelivery); the port only stores the answer
             erasure.store(comment.markForErasure(at));

@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
@@ -52,6 +53,8 @@ import static org.mockito.Mockito.when;
 @Feature("Shared events topic")
 class CommentsEventsTopicTest {
 
+    private static final UserId LEAVER = UserId.of("0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f");
+
     private static final String SAGA_OF_THE_KEYING_TEST = "b1a7c0de-0000-4000-8000-abcdefabcdef";
 
     /** The saga receiver's rule, transcribed from microservice-offboarding's EventsRouter#handle. */
@@ -90,7 +93,7 @@ class CommentsEventsTopicTest {
         when(deleteThread.execute(memeId)).thenReturn(List.of(commentId));
 
         saga.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + sagaId
-                + "\",\"email\":\"leaver@example.com\"}", null);
+                + "\",\"userId\":\"" + LEAVER + "\"}", null);
         cascade.receive("{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId + "\"}", null);
 
         List<JsonNode> topic = whatWentOnTheTopic(2);
@@ -119,7 +122,7 @@ class CommentsEventsTopicTest {
         when(deleteThread.execute(memeId)).thenReturn(List.of(UUID.randomUUID().toString()));
 
         saga.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + SAGA_OF_THE_KEYING_TEST
-                + "\",\"email\":\"leaver@example.com\"}", null);
+                + "\",\"userId\":\"" + LEAVER + "\"}", null);
         cascade.receive("{\"type\":\"MEME_DELETED\",\"memeId\":\"" + memeId + "\"}", null);
 
         List<ProducerRecord<String, String>> records = sentRecords(2);

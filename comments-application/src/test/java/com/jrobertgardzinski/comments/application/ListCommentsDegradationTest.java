@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
@@ -26,10 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Story("Vote store degradation")
 class ListCommentsDegradationTest {
 
+    private static final UserId ALICE = UserId.random();
+    private static final UserId BOB = UserId.random();
+
     private final CommentRepository repository = new CommentRepository() {
         private final List<Comment> comments = List.of(
-                new Comment("c1", "m1", "alice@example.com", "first"),
-                new Comment("c2", "m1", "bob@example.com", "second"));
+                new Comment("c1", "m1", "alice@example.com", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null),
+                new Comment("c2", "m1", "bob@example.com", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
 
         public void save(Comment comment) { }
         public List<Comment> findByMeme(String memeId) {
@@ -73,7 +78,7 @@ class ListCommentsDegradationTest {
     @DisplayName("when the vote store throws, the thread lists with null tallies instead of failing")
     void listing_survives_a_dead_vote_store() {
         ListComments.Page page = new ListComments(repository, noModeration, downVotes)
-                .execute("m1", Optional.of("alice@example.com"), 0, 10);
+                .execute("m1", Optional.of(ALICE), 0, 10);
 
         assertEquals(2, page.comments().size());
         assertTrue(page.comments().stream().allMatch(entry -> entry.tally() == null),
@@ -98,7 +103,7 @@ class ListCommentsDegradationTest {
         };
 
         ListComments.Page page = new ListComments(repository, noModeration, healthy)
-                .execute("m1", Optional.of("alice@example.com"), 0, 10);
+                .execute("m1", Optional.of(ALICE), 0, 10);
 
         assertEquals(new VoteTally(3, Optional.of(VoteDirection.UP)), page.comments().get(0).tally());
         assertEquals(new VoteTally(0, Optional.empty()), page.comments().get(1).tally());

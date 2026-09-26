@@ -46,9 +46,11 @@ class RequireSignInFilter extends OncePerRequestFilter {
             return;
         }
         Optional<Caller> caller = bearerToken(request).flatMap(gate::callerFor);
+        // a token without an id predates the cutover (the address as subject); it is nobody here
+        caller = caller.filter(c -> c.userId().isPresent());
         caller.ifPresent(c -> {
             request.setAttribute(AUTHENTICATED_USER, c.email());
-            c.userId().ifPresent(id -> request.setAttribute(AUTHENTICATED_USER_ID, id));
+            request.setAttribute(AUTHENTICATED_USER_ID, c.userId().orElseThrow());
             request.setAttribute(AUTHENTICATED_ROLES, c.roles());
         });
         boolean write = Set.of("POST", "PUT", "DELETE", "PATCH").contains(request.getMethod());

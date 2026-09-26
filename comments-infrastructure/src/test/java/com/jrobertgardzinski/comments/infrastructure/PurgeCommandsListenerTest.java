@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import java.util.Optional;
 import com.jrobertgardzinski.purge.PurgeRule;
 import ch.qos.logback.classic.Logger;
@@ -42,6 +43,8 @@ import static org.mockito.Mockito.when;
 @Epic("Saga")
 @Feature("Purge command handling")
 class PurgeCommandsListenerTest {
+
+    private static final UserId LEAVER = UserId.of("0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f");
 
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final RestoreUserComments restoreUserComments = mock(RestoreUserComments.class);
@@ -89,7 +92,7 @@ class PurgeCommandsListenerTest {
     @Test
     @DisplayName("a purge command with a blank email is dropped the same way")
     void blank_email_is_dropped_without_confirmation() throws Exception {
-        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-2\",\"email\":\"\"}", null);
+        listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-2\",\"userId\":\"\"}", null);
         verifyNoInteractions(markForErasure, restoreUserComments, purgeUserComments, confirmations);
     }
 
@@ -112,10 +115,10 @@ class PurgeCommandsListenerTest {
     void invalid_rule_text_is_not_echoed_into_the_log() throws Exception {
         // PurgeRule.parse's message pastes the raw rule text — the WARN must not repeat it
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-5\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"totally bogus leaver@example.com rule\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.empty());
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("unparseable comments purge rule")),
                 "the fallback to the default must still leave a trace in the log");
@@ -131,10 +134,10 @@ class PurgeCommandsListenerTest {
         // the old per-character filter kept [0-9], so "+48 601 234 567" leaked as 48?601?234?567;
         // the token whitelist accepts numbers only as KEEP_POPULAR_ANONYMIZED's threshold
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-6\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"call me +48 601 234 567\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.empty());
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("unparseable comments purge rule")),
                 "the fallback to the default must still leave a trace in the log");
@@ -152,10 +155,10 @@ class PurgeCommandsListenerTest {
         // eleven digits — the old filter passed all of them; ≤4-digit thresholds are only
         // vocabulary straight after KEEP_POPULAR_ANONYMIZED:, so a bare number collapses to ?
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-7\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"90010112345\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.empty());
         assertFalse(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("90010112345")
                                 || event.getFormattedMessage().contains("9001")),
@@ -168,10 +171,10 @@ class PurgeCommandsListenerTest {
         // the old filter kept [A-Z_], so LEAVER@EXAMPLE.COM leaked as LEAVER?EXAMPLE?COM;
         // whole-token whitelisting reduces every non-vocabulary word to ?
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-8\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"LEAVER@EXAMPLE.COM\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.empty());
         assertFalse(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("LEAVER")
                                 || event.getFormattedMessage().contains("EXAMPLE")
@@ -183,9 +186,9 @@ class PurgeCommandsListenerTest {
     @DisplayName("a successful mark logs the saga id, never the leaver's e-mail")
     void successful_purge_keeps_the_email_out_of_the_log() throws Exception {
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-3\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
-        verify(markForErasure).execute("leaver@example.com", Optional.empty());
+        verify(markForErasure).execute(LEAVER);
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("s-3")),
                 "the saga id identifies the run in the log");
@@ -197,17 +200,17 @@ class PurgeCommandsListenerTest {
     @Test
     @DisplayName("a completed mark confirms the SAME saga it was commanded for — and erases nothing")
     void a_completed_purge_confirms_its_own_saga() throws Exception {
-        when(markForErasure.execute("leaver@example.com", Optional.empty())).thenReturn(3);
+        when(markForErasure.execute(LEAVER)).thenReturn(3);
 
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-9\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
         InOrder order = inOrder(markForErasure, confirmations);
         // the mark first, the promise to report it second, both inside one transaction: a
         // confirmation announced before the mark would be a lie the outbox then made durable
-        order.verify(markForErasure).execute("leaver@example.com", Optional.empty());
+        order.verify(markForErasure).execute(LEAVER);
         // and the confirmation carries what the mark actually reserved, not just that it ran
-        order.verify(confirmations).confirm("s-9", "leaver@example.com", 3);
+        order.verify(confirmations).confirm("s-9", LEAVER, 3);
         // and the point of the two-phase design: the reversible command destroys nothing
         verifyNoInteractions(purgeUserComments);
         assertTrue(observed.isEmpty(), "a mark with something to reserve raises no alarm: " + observed);
@@ -221,9 +224,9 @@ class PurgeCommandsListenerTest {
         // the address they used to have — and this service cannot tell the two apart, so it stops
         // claiming and starts reporting
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-14\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
-        verify(confirmations).confirm("s-14", "leaver@example.com", 0);
+        verify(confirmations).confirm("s-14", LEAVER, 0);
         assertEquals(java.util.List.of(new Observation.PurgeReservedNothing()), observed,
                 "an empty confirmation is the one thing only this service can count");
         assertTrue(logLines.list.stream().anyMatch(event ->
@@ -238,9 +241,9 @@ class PurgeCommandsListenerTest {
     @DisplayName("the closure erases, and is NOT confirmed — the orchestrator has already decided")
     void the_closure_erases_what_the_mark_reserved() throws Exception {
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-11\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.empty());
         verifyNoInteractions(markForErasure, restoreUserComments, confirmations);
     }
 
@@ -248,9 +251,9 @@ class PurgeCommandsListenerTest {
     @DisplayName("the compensation restores, erases nothing and is not confirmed either")
     void the_compensation_restores() throws Exception {
         listener.receive("{\"type\":\"RESTORE_USER_CONTENT\",\"sagaId\":\"s-12\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
-        verify(restoreUserComments).execute("leaver@example.com", Optional.empty());
+        verify(restoreUserComments).execute(LEAVER);
         verifyNoInteractions(markForErasure, purgeUserComments, confirmations);
     }
 
@@ -258,7 +261,7 @@ class PurgeCommandsListenerTest {
     @DisplayName("a command type this participant does not know is ignored, not guessed at")
     void an_unknown_command_type_is_ignored() throws Exception {
         listener.receive("{\"type\":\"SOMETHING_ELSE\",\"sagaId\":\"s-13\","
-                + "\"email\":\"leaver@example.com\"}", null);
+                + "\"userId\":\"" + LEAVER + "\"}", null);
 
         verifyNoInteractions(markForErasure, restoreUserComments, purgeUserComments, confirmations);
     }
@@ -267,11 +270,11 @@ class PurgeCommandsListenerTest {
     @DisplayName("a mark that fails confirms nothing and lets the failure out — so Kafka redelivers")
     void a_failed_purge_confirms_nothing() {
         doThrow(new IllegalStateException("the store is down"))
-                .when(markForErasure).execute("leaver@example.com", Optional.empty());
+                .when(markForErasure).execute(LEAVER);
 
         assertThrows(IllegalStateException.class, () ->
                 listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-10\","
-                        + "\"email\":\"leaver@example.com\"}", null));
+                        + "\"userId\":\"" + LEAVER + "\"}", null));
 
         // the failure must reach the container: that is what makes SagaRetryBudget retry the record
         // instead of the offset being committed over a purge that did not happen
@@ -287,19 +290,19 @@ class PurgeCommandsListenerTest {
         // the leaver is exercising the right to be forgotten and no rule may keep their words —
         // so the answer is STATED (Delete), not left empty, which would let the default answer
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"SELF\",\"sagaId\":\"s-90\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"ANONYMIZE_AUTHOR\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.of(new PurgeRule.Delete()));
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.of(new PurgeRule.Delete()));
     }
 
     @Test
     @DisplayName("a command with no initiator at all is read as the leaver's own request")
     void an_absent_initiator_is_read_as_self() throws Exception {
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"sagaId\":\"s-91\","
-                + "\"email\":\"leaver@example.com\","
+                + "\"userId\":\"" + LEAVER + "\","
                 + "\"policy\":{\"comments\":\"KEEP_POPULAR_ANONYMIZED:1\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.of(new PurgeRule.Delete()));
+        verify(purgeUserComments).execute(LEAVER, java.util.Optional.of(new PurgeRule.Delete()));
     }
 }

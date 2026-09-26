@@ -68,11 +68,9 @@ class CommentsConfig {
         // purge votes + delete comment must land or fail together
         return new DeleteComment(commentRepository, commentVotes) {
             @Override
-            public Result execute(String memeId, String commentId, String caller,
-                                  java.util.Optional<com.jrobertgardzinski.identity.UserId> callerId,
-                                  boolean callerIsModerator) {
-                return tx.execute(status ->
-                        super.execute(memeId, commentId, caller, callerId, callerIsModerator));
+            public Result execute(String memeId, String commentId,
+                                  com.jrobertgardzinski.identity.UserId caller, boolean callerIsModerator) {
+                return tx.execute(status -> super.execute(memeId, commentId, caller, callerIsModerator));
             }
         };
     }
@@ -124,7 +122,7 @@ class CommentsConfig {
         // the whole GDPR sweep is one unit: a crash mid-purge must not leave half an account gone
         return new PurgeUserComments(commentRepository, erasure, commentVotes, defaultCommentsPurgeRule) {
             @Override
-            public void execute(String author, Optional<PurgeRule> requested) {
+            public void execute(com.jrobertgardzinski.identity.UserId author, Optional<PurgeRule> requested) {
                 tx.executeWithoutResult(status -> super.execute(author, requested));
             }
         };
@@ -146,16 +144,6 @@ class CommentsConfig {
         return new RestoreUserComments(erasure);
     }
 
-    /**
-     * No transactional decorator here either, and for the listener's reason rather than the saga's:
-     * {@code SecurityEventsListener} opens one transaction per record, so the two tables the re-key
-     * touches move together or not at all.
-     */
-    @Bean
-    com.jrobertgardzinski.comments.application.RekeyUserComments rekeyUserComments(
-            com.jrobertgardzinski.comments.application.UserCommentsRekey rekey) {
-        return new com.jrobertgardzinski.comments.application.RekeyUserComments(rekey);
-    }
 
     @Bean
     DeleteThread deleteThread(CommentRepository commentRepository, CommentErasure erasure,

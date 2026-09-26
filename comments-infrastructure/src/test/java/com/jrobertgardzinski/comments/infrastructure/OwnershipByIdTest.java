@@ -44,21 +44,20 @@ class OwnershipByIdTest {
     @DisplayName("the same id under a new address still owns the comment; the same address under another id does not")
     void the_id_outranks_the_address() throws Exception {
         String body = mockMvc.perform(post(THREAD)
-                        .header("Authorization", "Bearer " + TestAuthConfig.ALICE_ID_TOKEN)
+                        .header("Authorization", "Bearer " + TestAuthConfig.VALID_TOKEN)
                         .contentType("application/json").content("{\"text\":\"mine\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String commentId = objectMapper.readTree(body).get("id").asText();
 
-        assertTrue(own(commentId, TestAuthConfig.ALICE_ID_RENAMED_TOKEN), "same id, new address");
+        assertTrue(own(commentId, TestAuthConfig.RENAMED_TOKEN), "same id, new address");
         assertFalse(own(commentId, TestAuthConfig.IMPOSTOR_TOKEN), "same address, another id");
-        assertTrue(own(commentId, TestAuthConfig.VALID_TOKEN), "a token without an id falls back to the address");
 
         mockMvc.perform(delete(THREAD + "/" + commentId)
                         .header("Authorization", "Bearer " + TestAuthConfig.IMPOSTOR_TOKEN))
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete(THREAD + "/" + commentId)
-                        .header("Authorization", "Bearer " + TestAuthConfig.ALICE_ID_RENAMED_TOKEN))
+                        .header("Authorization", "Bearer " + TestAuthConfig.RENAMED_TOKEN))
                 .andExpect(status().isOk());
     }
 

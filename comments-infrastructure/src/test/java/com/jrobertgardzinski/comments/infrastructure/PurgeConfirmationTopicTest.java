@@ -47,7 +47,7 @@ class PurgeConfirmationTopicTest {
                 mock(RestoreUserComments.class), mock(PurgeUserComments.class), confirmations,
                 Observations.silent(), new ObjectMapper(), NoTransactions.template())
                 .receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + SAGA + "\","
-                        + "\"email\":\"leaver@example.com\"}", null);
+                        + "\"userId\":\"0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f\"}", null);
         // the same mapping the outbox's dispatch performs on the stored row, first attempt or
         // republication alike — a topic mangled anywhere on that way would still pass a constant check
         return KafkaCommentDispatch.toRecord(confirmations.captured());

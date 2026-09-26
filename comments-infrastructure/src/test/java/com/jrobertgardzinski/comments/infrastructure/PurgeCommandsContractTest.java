@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import au.com.dius.pact.consumer.MessagePactBuilder;
 import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -61,7 +62,6 @@ class PurgeCommandsContractTest {
                 .withContent(new PactDslJsonBody()
                         .stringValue("type", "PURGE_USER_CONTENT")
                         .uuid("sagaId")
-                        .stringType("email", "leaver@example.com")
                         .uuid("userId"))
                 .toPact();
     }
@@ -71,7 +71,7 @@ class PurgeCommandsContractTest {
     void purgesWithTheDeploymentDefault(List<Message> messages) throws Exception {
         listener.receive(messages.get(0).contentsAsString(), null);
         // the mark, not the erasure: this command is the reversible half of the saga
-        verify(markForErasure).execute(eq("leaver@example.com"), argThat(Optional::isPresent));
+        verify(markForErasure).execute(any(UserId.class));
     }
 
     @Pact(consumer = "microservice-comments")
@@ -80,7 +80,6 @@ class PurgeCommandsContractTest {
                 .withContent(new PactDslJsonBody()
                         .stringValue("type", "PURGE_USER_CONTENT")
                         .uuid("sagaId")
-                        .stringType("email", "leaver@example.com")
                         .uuid("userId")
                         .object("policy")
                         .stringType("comments", "ANONYMIZE_AUTHOR")
@@ -93,7 +92,7 @@ class PurgeCommandsContractTest {
     void purgesWithTheLeaversChoice(List<Message> messages) throws Exception {
         listener.receive(messages.get(0).contentsAsString(), null);
         // the policy rides the mark and is not acted on here — the CLOSURE is what applies it
-        verify(markForErasure).execute(eq("leaver@example.com"), argThat(Optional::isPresent));
+        verify(markForErasure).execute(any(UserId.class));
     }
 
     @Pact(consumer = "microservice-comments")
@@ -102,7 +101,6 @@ class PurgeCommandsContractTest {
                 .withContent(new PactDslJsonBody()
                         .stringValue("type", "ERASE_USER_CONTENT")
                         .uuid("sagaId")
-                        .stringType("email", "leaver@example.com")
                         .uuid("userId")
                         // the basis: only ADMIN licenses the rule below it, and this consumer
                         // needs the field stated rather than inferred — everything else it reads
@@ -118,8 +116,7 @@ class PurgeCommandsContractTest {
     @PactTestFor(pactMethod = "eraseCommand")
     void erasesOnTheClosureAndAppliesTheRule(List<Message> messages) throws Exception {
         listener.receive(messages.get(0).contentsAsString(), null);
-        verify(purgeUserComments).execute(eq("leaver@example.com"), argThat(Optional::isPresent),
-                eq(Optional.of(new PurgeRule.AnonymizeAuthor())));
+        verify(purgeUserComments).execute(any(UserId.class), eq(Optional.of(new PurgeRule.AnonymizeAuthor())));
     }
 
     @Pact(consumer = "microservice-comments")
@@ -128,7 +125,6 @@ class PurgeCommandsContractTest {
                 .withContent(new PactDslJsonBody()
                         .stringValue("type", "RESTORE_USER_CONTENT")
                         .uuid("sagaId")
-                        .stringType("email", "leaver@example.com")
                         .uuid("userId"))
                 .toPact();
     }
@@ -141,6 +137,6 @@ class PurgeCommandsContractTest {
                 new CapturedConfirmations(), Observations.silent(), new ObjectMapper(),
                 NoTransactions.template())
                 .receive(messages.get(0).contentsAsString(), null);
-        verify(restore).execute(eq("leaver@example.com"), argThat(Optional::isPresent));
+        verify(restore).execute(any(UserId.class));
     }
 }

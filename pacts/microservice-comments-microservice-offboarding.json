@@ -5,7 +5,6 @@
   "messages": [
     {
       "contents": {
-        "email": "leaver@example.com",
         "sagaId": "e2490de5-5bd3-43d5-b7c4-526e33f71304",
         "type": "PURGE_USER_CONTENT",
         "userId": "e2490de5-5bd3-43d5-b7c4-526e33f71304"
@@ -23,14 +22,6 @@
       },
       "matchingRules": {
         "body": {
-          "$.email": {
-            "combine": "AND",
-            "matchers": [
-              {
-                "match": "type"
-              }
-            ]
-          },
           "$.sagaId": {
             "combine": "AND",
             "matchers": [
@@ -57,7 +48,6 @@
     },
     {
       "contents": {
-        "email": "leaver@example.com",
         "policy": {
           "comments": "ANONYMIZE_AUTHOR"
         },
@@ -78,14 +68,6 @@
       },
       "matchingRules": {
         "body": {
-          "$.email": {
-            "combine": "AND",
-            "matchers": [
-              {
-                "match": "type"
-              }
-            ]
-          },
           "$.policy.comments": {
             "combine": "AND",
             "matchers": [
@@ -120,7 +102,6 @@
     },
     {
       "contents": {
-        "email": "leaver@example.com",
         "sagaId": "e2490de5-5bd3-43d5-b7c4-526e33f71304",
         "type": "RESTORE_USER_CONTENT",
         "userId": "e2490de5-5bd3-43d5-b7c4-526e33f71304"
@@ -138,14 +119,6 @@
       },
       "matchingRules": {
         "body": {
-          "$.email": {
-            "combine": "AND",
-            "matchers": [
-              {
-                "match": "type"
-              }
-            ]
-          },
           "$.sagaId": {
             "combine": "AND",
             "matchers": [
@@ -172,7 +145,6 @@
     },
     {
       "contents": {
-        "email": "leaver@example.com",
         "initiatedBy": "ADMIN",
         "policy": {
           "comments": "ANONYMIZE_AUTHOR"
@@ -194,14 +166,6 @@
       },
       "matchingRules": {
         "body": {
-          "$.email": {
-            "combine": "AND",
-            "matchers": [
-              {
-                "match": "type"
-              }
-            ]
-          },
           "$.policy.comments": {
             "combine": "AND",
             "matchers": [

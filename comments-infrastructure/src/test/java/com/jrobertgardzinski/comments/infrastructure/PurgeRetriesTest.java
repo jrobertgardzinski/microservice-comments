@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import java.util.Optional;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -56,9 +57,9 @@ import static org.mockito.Mockito.when;
 @Feature("Purge retries")
 class PurgeRetriesTest {
 
-    private static final String LEAVER = "leaver@example.com";
+    private static final UserId LEAVER = UserId.of("0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f");
     private static final String SAGA = "3b8f0e64-2f1d-4b8b-9a44-6f9a2b1c0d55";
-    private static final String COMMAND = "{\"type\":\"PURGE_USER_CONTENT\",\"email\":\"" + LEAVER
+    private static final String COMMAND = "{\"type\":\"PURGE_USER_CONTENT\",\"userId\":\"" + LEAVER
             + "\",\"sagaId\":\"" + SAGA + "\"}";
 
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
@@ -100,7 +101,7 @@ class PurgeRetriesTest {
 
     private ConsumerRecord<String, String> command() {
         ConsumerRecord<String, String> record =
-                new ConsumerRecord<>("content-commands", 0, 42L, LEAVER, COMMAND);
+                new ConsumerRecord<>("content-commands", 0, 42L, LEAVER.toString(), COMMAND);
         // the cid the deletion request started with, as the orchestrator's producer stamps it
         record.headers().add(KafkaTracing.HEADER, "cid-of-the-deletion".getBytes(StandardCharsets.UTF_8));
         return record;
@@ -129,7 +130,7 @@ class PurgeRetriesTest {
                 throw new org.springframework.dao.QueryTimeoutException("the pool is momentarily empty");
             }
             return null;
-        }).when(markForErasure).execute(LEAVER, Optional.empty());
+        }).when(markForErasure).execute(LEAVER);
 
         assertFalse(deliverOnce(), "the first delivery fails — the handler must ask for a redelivery,"
                 + " not commit the offset over a mark that did not happen");
@@ -144,7 +145,7 @@ class PurgeRetriesTest {
     @DisplayName("a store outage that does not pass: the retrying ends with the budget, not never")
     void a_permanent_outage_ends_with_the_budget() throws Exception {
         Mockito.doThrow(new org.springframework.dao.DataAccessResourceFailureException("no database"))
-                .when(markForErasure).execute(LEAVER, Optional.empty());
+                .when(markForErasure).execute(LEAVER);
 
         int deliveries = 0;
         long startedAt = System.nanoTime();
@@ -167,7 +168,7 @@ class PurgeRetriesTest {
     void the_drop_is_counted_and_says_nothing_private() throws Exception {
         Mockito.doThrow(new org.springframework.dao.DataAccessResourceFailureException(
                         "FATAL: password authentication failed for user \"" + LEAVER + "\""))
-                .when(markForErasure).execute(LEAVER, Optional.empty());
+                .when(markForErasure).execute(LEAVER);
 
         int deliveries = 0;
         while (!deliverOnce()) {
@@ -182,7 +183,7 @@ class PurgeRetriesTest {
         assertTrue(lines.stream().anyMatch(line -> line.contains("DROPPED")
                         && line.contains("content-commands-0@42")),
                 "the drop names the record's coordinates so an operator can find it: " + lines);
-        assertFalse(lines.stream().anyMatch(line -> line.contains(LEAVER)),
+        assertFalse(lines.stream().anyMatch(line -> line.contains(LEAVER.toString())),
                 "and a driver's own message may quote row values — the address must not survive into"
                         + " the retry or drop lines: " + lines);
         assertTrue(lines.stream().anyMatch(line ->

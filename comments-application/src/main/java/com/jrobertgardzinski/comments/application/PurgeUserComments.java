@@ -43,11 +43,7 @@ public class PurgeUserComments {
         this.defaultRule = defaultRule;
     }
 
-    public void execute(String author, Optional<PurgeRule> requested) {
-        execute(author, Optional.empty(), requested);
-    }
-
-    public void execute(String author, Optional<UserId> authorId, Optional<PurgeRule> requested) {
+    public void execute(UserId author, Optional<PurgeRule> requested) {
         PurgeRule rule = requested.orElse(defaultRule);
         // FIRST, before any score is read: the leaver's own votes are leaving with him anyway, and a
         // rule like "keep what the community liked" must be answered by the COMMUNITY. Retracting
@@ -56,8 +52,8 @@ public class PurgeUserComments {
         // this method was about to delete. The sibling service fixed the same ordering as P18 poz.
         // 39; it is also why the rule is not read at MARK time (MarkUserCommentsForErasure): the
         // mark must change nothing, and this ordering needs the votes to go first.
-        commentVotes.purgeVoter(author);
-        for (Comment comment : erasure.pendingOf(author, authorId)) {
+        commentVotes.purgeVoter(author.toString());   // ballots are keyed by the voter's id, in its wire form
+        for (Comment comment : erasure.pendingOf(author)) {
             if (rule.keeps(commentVotes.scoreOf(comment.id()))) {
                 commentRepository.reassignAuthor(comment.id(), DeletedAccount.AUTHOR);
                 erasure.store(comment.restore());   // kept: back into the thread, anonymised
