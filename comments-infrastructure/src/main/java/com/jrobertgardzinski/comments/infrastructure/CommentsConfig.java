@@ -46,6 +46,17 @@ class CommentsConfig {
     }
 
     @Bean
+    com.jrobertgardzinski.authors.AuthorDirectory authorDirectory(
+            @Value("${security.url}") String securityUrl,
+            @Value("${comments.author-names.cache-seconds:60}") long cacheSeconds) {
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger("comments.author-names");
+        return com.jrobertgardzinski.authors.SecurityAuthorDirectory.overHttp(securityUrl,
+                new com.fasterxml.jackson.databind.ObjectMapper(), java.time.Duration.ofSeconds(cacheSeconds),
+                java.time.Clock.systemUTC(),
+                failure -> log.warn("author names unavailable, showing content without them: {}", failure.toString()));
+    }
+
+    @Bean
     RateLimit commentRate(@Value("${comments.rate-limit.per-minute:20}") int perMinute) {
         return new RateLimit(perMinute);
     }

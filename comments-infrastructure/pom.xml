@@ -122,6 +122,14 @@
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>offline-jwt</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>user-id</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>author-directory</artifactId>
+        </dependency>
         <!-- COMMENTS_DELETED durability (round 10): the framework-free outbox core plus its Spring
              adapter, extracted from microservice-memes' hardened implementation. This service used
              to argue that an outbox was too expensive for the cascade's stakes; owning one now

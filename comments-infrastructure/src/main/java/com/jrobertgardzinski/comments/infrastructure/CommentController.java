@@ -58,18 +58,24 @@ class CommentController {
     private final RateLimit commentRate;
 
     CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment,
-                      DeleteComment deleteComment, HideComment hideComment, RateLimit commentRate) {
+                      DeleteComment deleteComment, HideComment hideComment, RateLimit commentRate,
+                      com.jrobertgardzinski.authors.AuthorDirectory authors) {
         this.addComment = addComment;
         this.listComments = listComments;
         this.voteOnComment = voteOnComment;
         this.deleteComment = deleteComment;
         this.hideComment = hideComment;
         this.commentRate = commentRate;
+        this.authors = authors;
     }
+
+    private final com.jrobertgardzinski.authors.AuthorDirectory authors;
 
     @PostMapping
     ResponseEntity<?> add(@PathVariable("memeId") String memeId,
                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String author,
+                          @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_USER_ID, required = false)
+                          com.jrobertgardzinski.identity.UserId authorId,
                           @RequestBody CommentRequest request) {
         if (request.text() == null || request.text().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("status", "INVALID_COMMENT"));
@@ -82,7 +88,7 @@ class CommentController {
             return ResponseEntity.status(429).header("Retry-After", "60")
                     .body(Map.of("status", "RATE_LIMITED", "detail", "you are commenting too fast"));
         }
-        return addComment.execute(memeId, author, request.text())
+        return addComment.execute(memeId, author, Optional.ofNullable(authorId), request.text())
                 .<ResponseEntity<?>>map(comment ->
                         ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", comment.id())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -103,13 +109,13 @@ class CommentController {
         // in microservice-memes takes the same care, 1c86a5a.)
         int offset = (int) Math.min((long) Math.max(0, page) * limit, Integer.MAX_VALUE);
         return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
-                .comments().stream().map(CommentController::toBody).toList();
+                .comments().stream().map(this::toBody).toList();
     }
 
-    private static Map<String, Object> toBody(CommentWithScore entry) {
+    private Map<String, Object> toBody(CommentWithScore entry) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", entry.comment().id());
-        body.put("author", maskAuthor(entry.comment().author()));
+        body.put("author", nameOf(entry.comment()));
         // the full author never leaves the service, so the UI cannot compare it against the
         // signed-in user any more — "own" carries that answer instead (from the viewer's token)
         body.put("own", entry.viewerIsAuthor());
@@ -195,6 +201,17 @@ class CommentController {
      * (authorisation, purges) the full e-mail still flows; only this representation masks.
      * Non-e-mail authors (the "deleted account" placeholder) pass through untouched.
      */
+    /**
+     * The name security shows for the author's id; a row that predates the id still shows its
+     * masked address. An id security no longer knows is a deleted account.
+     */
+    private String nameOf(Comment comment) {
+        return comment.authorId()
+                .map(id -> authors.namesOf(java.util.List.of(id)).getOrDefault(id,
+                        new com.jrobertgardzinski.authors.AuthorName("deleted account")).display())
+                .orElseGet(() -> maskAuthor(comment.author()));
+    }
+
     private static String maskAuthor(String author) {
         int at = author.indexOf('@');
         if (at <= 0) {

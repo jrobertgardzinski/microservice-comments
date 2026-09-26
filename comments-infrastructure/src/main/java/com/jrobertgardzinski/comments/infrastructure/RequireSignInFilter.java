@@ -24,6 +24,7 @@ import java.util.Set;
 class RequireSignInFilter extends OncePerRequestFilter {
 
     static final String AUTHENTICATED_USER = "authenticatedUser";
+    static final String AUTHENTICATED_USER_ID = "authenticatedUserId";
     static final String AUTHENTICATED_ROLES = "authenticatedRoles";
 
     private final SecurityAuthenticationGate gate;
@@ -47,6 +48,7 @@ class RequireSignInFilter extends OncePerRequestFilter {
         Optional<Caller> caller = bearerToken(request).flatMap(gate::callerFor);
         caller.ifPresent(c -> {
             request.setAttribute(AUTHENTICATED_USER, c.email());
+            c.userId().ifPresent(id -> request.setAttribute(AUTHENTICATED_USER_ID, id));
             request.setAttribute(AUTHENTICATED_ROLES, c.roles());
         });
         boolean write = Set.of("POST", "PUT", "DELETE", "PATCH").contains(request.getMethod());

@@ -41,6 +41,14 @@ jobs:
           path: account-closure
       - uses: actions/checkout@v7
         with:
+          repository: jrobertgardzinski/user-id
+          path: user-id
+      - uses: actions/checkout@v7
+        with:
+          repository: jrobertgardzinski/author-directory
+          path: author-directory
+      - uses: actions/checkout@v7
+        with:
           repository: jrobertgardzinski/offline-jwt
           path: offline-jwt
       - uses: actions/checkout@v7
@@ -77,6 +85,8 @@ jobs:
           mvn -B -q --no-transfer-progress -f purge-rule/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f observation/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f account-closure/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f user-id/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f author-directory/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests

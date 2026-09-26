@@ -122,6 +122,16 @@
                 <version>1.0.0-SNAPSHOT</version>
             </dependency>
             <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>user-id</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>author-directory</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
                 <!-- COMMENTS_DELETED durability (round 10): the framework-free outbox core plus its
                      Spring adapter, extracted from microservice-memes' hardened implementation. This
                      service used to argue that an outbox was too expensive for the cascade's stakes;

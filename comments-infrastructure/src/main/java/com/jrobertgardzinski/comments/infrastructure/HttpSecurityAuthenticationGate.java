@@ -66,7 +66,9 @@ class HttpSecurityAuthenticationGate implements SecurityAuthenticationGate {
             // ones. Without this the two interchangeable gates disagreed about who a moderator is,
             // and the DEFAULT one was the permissive half (PLAN-P12 S3).
             boolean mfaCompliant = Boolean.TRUE.equals(body.get("mfaCompliant"));
-            return Optional.of(new Caller(email, Caller.withMfaFloor(roles, mfaCompliant)));
+            Optional<com.jrobertgardzinski.identity.UserId> userId = body.get("id") instanceof String id
+                    ? Caller.userIdFrom(id) : Optional.empty();
+            return Optional.of(new Caller(email, userId, Caller.withMfaFloor(roles, mfaCompliant)));
         } catch (RestClientException invalidTokenOrServiceDown) {
             return Optional.empty();
         }

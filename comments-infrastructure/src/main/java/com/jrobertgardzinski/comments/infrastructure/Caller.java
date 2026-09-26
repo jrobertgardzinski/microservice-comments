@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
+
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -7,7 +10,21 @@ import java.util.Set;
  * and their roles. A MODERATOR or ADMIN may act on other people's comments; a plain USER only on
  * their own.
  */
-record Caller(String email, Set<String> roles) {
+record Caller(String email, Optional<UserId> userId, Set<String> roles) {
+
+    /** A caller whose token predates the id as subject. */
+    Caller(String email, Set<String> roles) {
+        this(email, Optional.empty(), roles);
+    }
+
+    static Optional<UserId> userIdFrom(String subject) {
+        try {
+            return Optional.of(UserId.of(subject));
+        } catch (IllegalArgumentException notAnId) {
+            return Optional.empty();
+        }
+    }
+
 
     private static final Set<String> PRIVILEGED = Set.of("MODERATOR", "ADMIN");
 

@@ -42,7 +42,7 @@ class JwtSecurityAuthenticationGate implements SecurityAuthenticationGate {
 
     @Override
     public Optional<Caller> callerFor(String accessToken) {
-        return verifier.verify(accessToken).map(verified -> new Caller(verified.email(),
+        return verifier.verify(accessToken).map(verified -> new Caller(verified.email(), Caller.userIdFrom(verified.subject()),
                 Caller.withMfaFloor(verified.roles(), verified.mfaCompliant())));
     }
 }

@@ -31,21 +31,22 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public void save(Comment comment) {
-        jdbc.sql("INSERT INTO comments (id, meme_id, author, content, created_at) VALUES (?, ?, ?, ?, ?)")
-                .params(comment.id(), comment.memeId(), comment.author(), comment.text(),
+        jdbc.sql("INSERT INTO comments (id, meme_id, author, author_id, content, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+                .params(comment.id(), comment.memeId(), comment.author(),
+                        comment.authorId().map(com.jrobertgardzinski.identity.UserId::value).orElse(null), comment.text(),
                         java.sql.Timestamp.from(Instant.now()))
                 .update();
     }
 
     @Override
     public List<Comment> findByMeme(String memeId) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE meme_id = ? ORDER BY created_at")
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE meme_id = ? ORDER BY created_at")
                 .param(memeId).query(this::toComment).list();
     }
 
     @Override
     public List<Comment> findByMeme(String memeId, int offset, int limit) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE meme_id = ? "
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE meme_id = ? "
                         + "ORDER BY created_at LIMIT ? OFFSET ?")
                 .params(memeId, limit, offset).query(this::toComment).list();
     }
@@ -58,13 +59,13 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public Optional<Comment> find(String commentId) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE id = ?")
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE id = ?")
                 .param(commentId).query(this::toComment).optional();
     }
 
     @Override
     public List<Comment> findByAuthor(String author) {
-        return jdbc.sql("SELECT id, meme_id, author, content FROM active_comments WHERE author = ?")
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE author = ?")
                 .param(author).query(this::toComment).list();
     }
 
@@ -84,7 +85,13 @@ class JdbcCommentRepository implements CommentRepository {
     }
 
     private Comment toComment(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
-        return new Comment(rs.getString("id"), rs.getString("meme_id"),
-                rs.getString("author"), rs.getString("content"));
+        return new Comment(rs.getString("id"), rs.getString("meme_id"), rs.getString("author"), authorIdOf(rs),
+                rs.getString("content"), com.jrobertgardzinski.comments.domain.CommentStatus.ACTIVE, null);
+    }
+
+    /** Empty for a row written before the id column: the backfill fills those in. */
+    static Optional<com.jrobertgardzinski.identity.UserId> authorIdOf(java.sql.ResultSet rs) throws java.sql.SQLException {
+        java.util.UUID id = rs.getObject("author_id", java.util.UUID.class);
+        return Optional.ofNullable(id).map(com.jrobertgardzinski.identity.UserId::new);
     }
 }

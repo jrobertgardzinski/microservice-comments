@@ -41,7 +41,7 @@ class JdbcCommentErasure implements CommentErasure {
     }
 
     private List<Comment> byAuthor(String author, CommentStatus status) {
-        return jdbc.sql("SELECT id, meme_id, author, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE author = ? AND status = ?")
                 .params(author, status.name())
                 .query(JdbcCommentErasure::toComment).list();
@@ -67,7 +67,7 @@ class JdbcCommentErasure implements CommentErasure {
         // no status in the WHERE clause, and that is the whole point: the thread delete below it
         // destroys the base table's rows, marked ones included, so the cascade has to read them the
         // same way — otherwise it announces less than it took
-        return jdbc.sql("SELECT id, meme_id, author, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE meme_id = ? ORDER BY created_at")
                 .param(memeId)
                 .query(JdbcCommentErasure::toComment).list();
@@ -78,7 +78,7 @@ class JdbcCommentErasure implements CommentErasure {
         // the reaper's query in full — a status and an instant, served by
         // idx_comments_pending_erasure. Oldest first, because that is what an operator reading the
         // alarm needs to judge it.
-        return jdbc.sql("SELECT id, meme_id, author, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE status = ? AND marked_for_erasure_at < ? "
                         + "ORDER BY marked_for_erasure_at")
                 .params(CommentStatus.PENDING_ERASURE.name(), Timestamp.from(cutoff))
@@ -88,7 +88,7 @@ class JdbcCommentErasure implements CommentErasure {
     private static Comment toComment(ResultSet rs, int rowNum) throws SQLException {
         Timestamp marked = rs.getTimestamp("marked_for_erasure_at");
         return new Comment(rs.getString("id"), rs.getString("meme_id"), rs.getString("author"),
-                rs.getString("content"), CommentStatus.valueOf(rs.getString("status")),
+                JdbcCommentRepository.authorIdOf(rs), rs.getString("content"), CommentStatus.valueOf(rs.getString("status")),
                 marked == null ? null : marked.toInstant());
     }
 }
