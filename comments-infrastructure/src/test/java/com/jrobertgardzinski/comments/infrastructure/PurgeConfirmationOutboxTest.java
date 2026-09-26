@@ -85,7 +85,7 @@ class PurgeConfirmationOutboxTest {
 
         listener.receive(COMMAND, "cid-of-the-deletion");
 
-        verify(markForErasure).execute(LEAVER);
+        verify(markForErasure).execute(LEAVER, Optional.empty());
         ArgumentCaptor<ProducerRecord<String, String>> firstTry =
                 ArgumentCaptor.forClass(ProducerRecord.class);
         verify(kafka).send(firstTry.capture());
@@ -161,7 +161,7 @@ class PurgeConfirmationOutboxTest {
     @DisplayName("a purge that throws writes nothing at all and lets the failure out to the container")
     void a_failing_purge_writes_nothing() {
         doThrow(new org.springframework.dao.DataAccessResourceFailureException("no database"))
-                .when(markForErasure).execute(LEAVER);
+                .when(markForErasure).execute(LEAVER, Optional.empty());
 
         assertThrows(org.springframework.dao.DataAccessResourceFailureException.class,
                 () -> listener.receive(COMMAND, null));

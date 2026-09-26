@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import java.util.Optional;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentErasure;
 import com.jrobertgardzinski.comments.application.CommentErasureContractTest;
 import com.jrobertgardzinski.comments.application.CommentRepository;
@@ -31,7 +34,7 @@ class JdbcCommentErasureTest extends CommentErasureContractTest {
     }
 
     @Override
-    protected void givenActiveComment(String id, String author) {
-        comments.save(new Comment(id, "a-meme", author, "a comment"));
+    protected void givenActiveComment(String id, String author, Optional<UserId> authorId) {
+        comments.save(new Comment(id, "a-meme", author, authorId, "a comment", CommentStatus.ACTIVE, null));
     }
 }

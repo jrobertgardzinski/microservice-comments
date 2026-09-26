@@ -108,6 +108,7 @@ class PurgeCommandsListener {
                 command.path(ClosureMessages.Field.TYPE).asText(),
                 command.path(ClosureMessages.Field.SAGA_ID).asText(),
                 command.path(ClosureMessages.Field.EMAIL).asText(),
+                ClosureCommand.userIdOf(command.path(ClosureMessages.Field.USER_ID).asText(null)),
                 command.path(ClosureMessages.Field.INITIATED_BY).asText(),
                 rule.isMissingNode() ? Optional.empty() : Optional.of(rule.asText())));
     }

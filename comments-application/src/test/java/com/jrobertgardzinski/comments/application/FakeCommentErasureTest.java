@@ -1,5 +1,8 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentStatus;
+import java.util.Optional;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -21,7 +24,7 @@ class FakeCommentErasureTest extends CommentErasureContractTest {
     }
 
     @Override
-    protected void givenActiveComment(String id, String author) {
-        comments.add(new Comment(id, "a-meme", author, "a comment"));
+    protected void givenActiveComment(String id, String author, Optional<UserId> authorId) {
+        comments.add(new Comment(id, "a-meme", author, authorId, "a comment", CommentStatus.ACTIVE, null));
     }
 }

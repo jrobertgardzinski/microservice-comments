@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.DeletedAccount;
@@ -43,6 +44,10 @@ public class PurgeUserComments {
     }
 
     public void execute(String author, Optional<PurgeRule> requested) {
+        execute(author, Optional.empty(), requested);
+    }
+
+    public void execute(String author, Optional<UserId> authorId, Optional<PurgeRule> requested) {
         PurgeRule rule = requested.orElse(defaultRule);
         // FIRST, before any score is read: the leaver's own votes are leaving with him anyway, and a
         // rule like "keep what the community liked" must be answered by the COMMUNITY. Retracting
@@ -52,7 +57,7 @@ public class PurgeUserComments {
         // 39; it is also why the rule is not read at MARK time (MarkUserCommentsForErasure): the
         // mark must change nothing, and this ordering needs the votes to go first.
         commentVotes.purgeVoter(author);
-        for (Comment comment : erasure.pendingOf(author)) {
+        for (Comment comment : erasure.pendingOf(author, authorId)) {
             if (rule.keeps(commentVotes.scoreOf(comment.id()))) {
                 commentRepository.reassignAuthor(comment.id(), DeletedAccount.AUTHOR);
                 erasure.store(comment.restore());   // kept: back into the thread, anonymised

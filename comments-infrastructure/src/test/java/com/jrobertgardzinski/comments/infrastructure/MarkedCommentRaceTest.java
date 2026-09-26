@@ -148,7 +148,7 @@ class MarkedCommentRaceTest {
         try {
             Future<Throwable> purgeOutcome = pool.submit(() -> {
                 try {
-                    purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty()));
+                    purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty(), Optional.empty()));
                     return null;
                 } catch (RuntimeException raised) {
                     return raised;
@@ -182,7 +182,7 @@ class MarkedCommentRaceTest {
             // carrier would (PurgeCommandsListener / MemesEventsListener's error handler backs off
             // and redelivers), and the retry finds nothing left undone
             if (purgeFailure != null) {
-                purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty()));
+                purgeTx.executeWithoutResult(status -> purge.execute(LEAVER, Optional.empty(), Optional.empty()));
             } else {
                 cascadeTx.executeWithoutResult(status -> cascade.execute(meme));
             }

@@ -1,5 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
+import java.util.Optional;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.CommentStatus;
 
@@ -39,6 +41,26 @@ public class FakeCommentErasure implements CommentErasure {
     @Override
     public List<Comment> pendingOf(String author) {
         return byAuthor(author, true);
+    }
+
+    @Override
+    public List<Comment> activeOf(UserId author) {
+        return byAuthorId(author, false);
+    }
+
+    @Override
+    public List<Comment> pendingOf(UserId author) {
+        return byAuthorId(author, true);
+    }
+
+    private List<Comment> byAuthorId(UserId author, boolean marked) {
+        List<Comment> found = new ArrayList<>();
+        for (Comment comment : comments) {
+            if (comment.authorId().equals(Optional.of(author)) && marks.containsKey(comment.id()) == marked) {
+                found.add(withMark(comment));
+            }
+        }
+        return found;
     }
 
     private List<Comment> byAuthor(String author, boolean marked) {
@@ -91,7 +113,7 @@ public class FakeCommentErasure implements CommentErasure {
         Instant marked = marks.get(comment.id());
         return marked == null
                 ? comment
-                : new Comment(comment.id(), comment.memeId(), comment.author(), comment.text(),
-                        CommentStatus.PENDING_ERASURE, marked);
+                : new Comment(comment.id(), comment.memeId(), comment.author(), comment.authorId(),
+                        comment.text(), CommentStatus.PENDING_ERASURE, marked);
     }
 }

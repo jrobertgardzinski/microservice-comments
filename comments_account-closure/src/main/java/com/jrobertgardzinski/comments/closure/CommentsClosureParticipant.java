@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.closure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.closure.Atomically;
 import com.jrobertgardzinski.closure.ClosureCommand;
 import com.jrobertgardzinski.closure.ClosureConfirmations;
@@ -62,20 +63,21 @@ public final class CommentsClosureParticipant {
             return new ClosureOutcome.Unaddressed(type);
         }
         String email = command.email();   // PII: never logged
+        Optional<UserId> leaver = command.userId();
         return switch (type) {
             case MARK -> {
-                int reserved = markAndConfirm(sagaId, email);
+                int reserved = markAndConfirm(sagaId, email, leaver);
                 LOG.info("marked {} of one leaver's comments for erasure (saga {})", reserved, sagaId);
                 yield new ClosureOutcome.Reserved(reserved);
             }
             case ERASE -> {
                 Optional<PurgeRule> rule = requestedRule(command);   // pure reading, kept outside the step
-                atomically.run(() -> purgeUserComments.execute(email, rule));
+                atomically.run(() -> purgeUserComments.execute(email, leaver, rule));
                 LOG.info("erased one leaver's marked comments on the saga's closure (saga {})", sagaId);
                 yield new ClosureOutcome.Erased();
             }
             case RESTORE -> {
-                atomically.run(() -> restoreUserComments.execute(email));
+                atomically.run(() -> restoreUserComments.execute(email, leaver));
                 LOG.info("restored one leaver's comments: the saga compensated (saga {})", sagaId);
                 yield new ClosureOutcome.Restored();
             }
@@ -84,10 +86,10 @@ public final class CommentsClosureParticipant {
     }
 
     /** The confirmation is made INSIDE the unit of work: hidden comments with no word owed is the failure mode. */
-    private int markAndConfirm(String sagaId, String email) {
+    private int markAndConfirm(String sagaId, String email, Optional<UserId> leaver) {
         AtomicInteger reserved = new AtomicInteger();
         atomically.run(() -> {
-            int marked = markForErasure.execute(email);
+            int marked = markForErasure.execute(email, leaver);
             confirmations.confirm(sagaId, email, marked);
             reserved.set(marked);
         });

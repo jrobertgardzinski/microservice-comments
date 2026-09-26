@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import java.util.Optional;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -128,7 +129,7 @@ class PurgeRetriesTest {
                 throw new org.springframework.dao.QueryTimeoutException("the pool is momentarily empty");
             }
             return null;
-        }).when(markForErasure).execute(LEAVER);
+        }).when(markForErasure).execute(LEAVER, Optional.empty());
 
         assertFalse(deliverOnce(), "the first delivery fails — the handler must ask for a redelivery,"
                 + " not commit the offset over a mark that did not happen");
@@ -143,7 +144,7 @@ class PurgeRetriesTest {
     @DisplayName("a store outage that does not pass: the retrying ends with the budget, not never")
     void a_permanent_outage_ends_with_the_budget() throws Exception {
         Mockito.doThrow(new org.springframework.dao.DataAccessResourceFailureException("no database"))
-                .when(markForErasure).execute(LEAVER);
+                .when(markForErasure).execute(LEAVER, Optional.empty());
 
         int deliveries = 0;
         long startedAt = System.nanoTime();
@@ -166,7 +167,7 @@ class PurgeRetriesTest {
     void the_drop_is_counted_and_says_nothing_private() throws Exception {
         Mockito.doThrow(new org.springframework.dao.DataAccessResourceFailureException(
                         "FATAL: password authentication failed for user \"" + LEAVER + "\""))
-                .when(markForErasure).execute(LEAVER);
+                .when(markForErasure).execute(LEAVER, Optional.empty());
 
         int deliveries = 0;
         while (!deliverOnce()) {

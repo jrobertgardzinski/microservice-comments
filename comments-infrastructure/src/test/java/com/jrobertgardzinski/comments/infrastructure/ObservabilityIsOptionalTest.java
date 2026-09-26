@@ -115,6 +115,14 @@ class ObservabilityIsOptionalTest {
                 return List.of();
             }
 
+            public List<Comment> activeOf(com.jrobertgardzinski.identity.UserId author) {
+                return List.of();
+            }
+
+            public List<Comment> pendingOf(com.jrobertgardzinski.identity.UserId author) {
+                return List.of();
+            }
+
             public void store(Comment state) {
             }
 

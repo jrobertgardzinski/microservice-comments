@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentErasure;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.CommentStatus;
@@ -38,6 +39,23 @@ class JdbcCommentErasure implements CommentErasure {
     @Override
     public List<Comment> pendingOf(String author) {
         return byAuthor(author, CommentStatus.PENDING_ERASURE);
+    }
+
+    @Override
+    public List<Comment> activeOf(UserId author) {
+        return byAuthorId(author, CommentStatus.ACTIVE);
+    }
+
+    @Override
+    public List<Comment> pendingOf(UserId author) {
+        return byAuthorId(author, CommentStatus.PENDING_ERASURE);
+    }
+
+    private List<Comment> byAuthorId(UserId author, CommentStatus status) {
+        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
+                        + "FROM comments WHERE author_id = ? AND status = ?")
+                .params(author.value(), status.name())
+                .query(JdbcCommentErasure::toComment).list();
     }
 
     private List<Comment> byAuthor(String author, CommentStatus status) {

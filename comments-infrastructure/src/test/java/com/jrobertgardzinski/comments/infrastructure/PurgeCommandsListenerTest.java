@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import java.util.Optional;
 import com.jrobertgardzinski.purge.PurgeRule;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -114,7 +115,7 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"totally bogus leaver@example.com rule\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("unparseable comments purge rule")),
                 "the fallback to the default must still leave a trace in the log");
@@ -133,7 +134,7 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"call me +48 601 234 567\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("unparseable comments purge rule")),
                 "the fallback to the default must still leave a trace in the log");
@@ -154,7 +155,7 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"90010112345\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
         assertFalse(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("90010112345")
                                 || event.getFormattedMessage().contains("9001")),
@@ -170,7 +171,7 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"LEAVER@EXAMPLE.COM\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
         assertFalse(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("LEAVER")
                                 || event.getFormattedMessage().contains("EXAMPLE")
@@ -184,7 +185,7 @@ class PurgeCommandsListenerTest {
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-3\","
                 + "\"email\":\"leaver@example.com\"}", null);
 
-        verify(markForErasure).execute("leaver@example.com");
+        verify(markForErasure).execute("leaver@example.com", Optional.empty());
         assertTrue(logLines.list.stream().anyMatch(event ->
                         event.getFormattedMessage().contains("s-3")),
                 "the saga id identifies the run in the log");
@@ -196,7 +197,7 @@ class PurgeCommandsListenerTest {
     @Test
     @DisplayName("a completed mark confirms the SAME saga it was commanded for — and erases nothing")
     void a_completed_purge_confirms_its_own_saga() throws Exception {
-        when(markForErasure.execute("leaver@example.com")).thenReturn(3);
+        when(markForErasure.execute("leaver@example.com", Optional.empty())).thenReturn(3);
 
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-9\","
                 + "\"email\":\"leaver@example.com\"}", null);
@@ -204,7 +205,7 @@ class PurgeCommandsListenerTest {
         InOrder order = inOrder(markForErasure, confirmations);
         // the mark first, the promise to report it second, both inside one transaction: a
         // confirmation announced before the mark would be a lie the outbox then made durable
-        order.verify(markForErasure).execute("leaver@example.com");
+        order.verify(markForErasure).execute("leaver@example.com", Optional.empty());
         // and the confirmation carries what the mark actually reserved, not just that it ran
         order.verify(confirmations).confirm("s-9", "leaver@example.com", 3);
         // and the point of the two-phase design: the reversible command destroys nothing
@@ -239,7 +240,7 @@ class PurgeCommandsListenerTest {
         listener.receive("{\"type\":\"ERASE_USER_CONTENT\",\"initiatedBy\":\"ADMIN\",\"sagaId\":\"s-11\","
                 + "\"email\":\"leaver@example.com\"}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com", java.util.Optional.empty());
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.empty());
         verifyNoInteractions(markForErasure, restoreUserComments, confirmations);
     }
 
@@ -249,7 +250,7 @@ class PurgeCommandsListenerTest {
         listener.receive("{\"type\":\"RESTORE_USER_CONTENT\",\"sagaId\":\"s-12\","
                 + "\"email\":\"leaver@example.com\"}", null);
 
-        verify(restoreUserComments).execute("leaver@example.com");
+        verify(restoreUserComments).execute("leaver@example.com", Optional.empty());
         verifyNoInteractions(markForErasure, purgeUserComments, confirmations);
     }
 
@@ -266,7 +267,7 @@ class PurgeCommandsListenerTest {
     @DisplayName("a mark that fails confirms nothing and lets the failure out — so Kafka redelivers")
     void a_failed_purge_confirms_nothing() {
         doThrow(new IllegalStateException("the store is down"))
-                .when(markForErasure).execute("leaver@example.com");
+                .when(markForErasure).execute("leaver@example.com", Optional.empty());
 
         assertThrows(IllegalStateException.class, () ->
                 listener.receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"s-10\","
@@ -289,8 +290,7 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"ANONYMIZE_AUTHOR\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com",
-                java.util.Optional.of(new PurgeRule.Delete()));
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.of(new PurgeRule.Delete()));
     }
 
     @Test
@@ -300,7 +300,6 @@ class PurgeCommandsListenerTest {
                 + "\"email\":\"leaver@example.com\","
                 + "\"policy\":{\"comments\":\"KEEP_POPULAR_ANONYMIZED:1\"}}", null);
 
-        verify(purgeUserComments).execute("leaver@example.com",
-                java.util.Optional.of(new PurgeRule.Delete()));
+        verify(purgeUserComments).execute("leaver@example.com", Optional.empty(), java.util.Optional.of(new PurgeRule.Delete()));
     }
 }
