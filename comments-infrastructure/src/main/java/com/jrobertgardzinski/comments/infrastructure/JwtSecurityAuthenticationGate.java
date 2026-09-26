@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 /**
  * Offline {@link SecurityAuthenticationGate} ({@code security.verify=offline}): instead of asking
  * {@code GET /me} per request, the access token's own EdDSA signature is verified against the
- * public keys security serves at {@code /.well-known/jwks.json} and the caller (subject + roles)
+ * public keys security serves at {@code /.well-known/jwks.json} and the caller (e-mail claim + roles)
  * is read from the claims. The trade-off is revocation blindness until the token's {@code exp}.
  *
  * <p>The verification core is the shared offline-jwt library — it used to be a local copy with
@@ -42,7 +42,7 @@ class JwtSecurityAuthenticationGate implements SecurityAuthenticationGate {
 
     @Override
     public Optional<Caller> callerFor(String accessToken) {
-        return verifier.verify(accessToken).map(verified -> new Caller(verified.subject(),
+        return verifier.verify(accessToken).map(verified -> new Caller(verified.email(),
                 Caller.withMfaFloor(verified.roles(), verified.mfaCompliant())));
     }
 }
