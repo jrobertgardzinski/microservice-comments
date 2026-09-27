@@ -75,7 +75,6 @@ class TransactionalDecoratorsTest {
                 }
                 public int countByMeme(String memeId) { return real.countByMeme(memeId); }
                 public Optional<Comment> find(String commentId) { return real.find(commentId); }
-                public List<Comment> findByAuthor(String author) { return real.findByAuthor(author); }
                 public void delete(String commentId) {
                     if (failDeleteOf.contains(commentId)) {
                         throw new DataAccessResourceFailureException("forced crash on the last step");
@@ -183,8 +182,13 @@ class TransactionalDecoratorsTest {
 
         // the default rule anonymised both comments before the crash; the rollback must have
         // restored the author — half an executed GDPR sweep is worse than a retried one
-        assertEquals(2, repository.findByAuthor(leaver).size(),
-                "the anonymisation must be rolled back with the failed final step");
+        for (String id : List.of(first, second)) {
+            Comment restored = repository.find(id).orElseThrow();
+            assertEquals(leaver, restored.author(),
+                    "the anonymisation must be rolled back with the failed final step");
+            assertEquals(Optional.of(leaverId), restored.authorId(),
+                    "the author id is what the row is keyed by: a rollback restores it too");
+        }
     }
 
     @Test

@@ -50,9 +50,6 @@ class PurgeAndCascadeTest {
             return comments.stream().filter(c -> c.id().equals(commentId)).findFirst();
         }
 
-        public List<Comment> findByAuthor(String author) {
-            return comments.stream().filter(c -> c.author().equals(author)).toList();
-        }
 
         public void delete(String commentId) {
             comments.removeIf(c -> c.id().equals(commentId));

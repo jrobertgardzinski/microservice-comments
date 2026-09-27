@@ -47,7 +47,6 @@ class ListCommentsDegradationTest {
         public Optional<Comment> find(String commentId) {
             return comments.stream().filter(c -> c.id().equals(commentId)).findFirst();
         }
-        public List<Comment> findByAuthor(String author) { return List.of(); }
         public void delete(String commentId) { }
         public void deleteByMeme(String memeId) { }
         public void reassignAuthor(String commentId, String newAuthor) { }

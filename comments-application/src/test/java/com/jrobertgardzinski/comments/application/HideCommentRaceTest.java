@@ -34,7 +34,6 @@ class HideCommentRaceTest {
         public List<Comment> findByMeme(String memeId, int offset, int limit) { return List.of(COMMENT); }
         public int countByMeme(String memeId) { return 1; }
         public Optional<Comment> find(String commentId) { return Optional.of(COMMENT); }
-        public List<Comment> findByAuthor(String author) { return List.of(); }
         public void delete(String commentId) { }
         public void deleteByMeme(String memeId) { }
         public void reassignAuthor(String commentId, String newAuthor) { }

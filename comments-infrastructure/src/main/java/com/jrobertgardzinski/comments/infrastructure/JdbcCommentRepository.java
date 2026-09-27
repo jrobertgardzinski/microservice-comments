@@ -64,12 +64,6 @@ class JdbcCommentRepository implements CommentRepository {
     }
 
     @Override
-    public List<Comment> findByAuthor(String author) {
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE author = ?")
-                .param(author).query(this::toComment).list();
-    }
-
-    @Override
     public void delete(String commentId) {
         jdbc.sql("DELETE FROM comments WHERE id = ?").param(commentId).update();
     }

@@ -20,8 +20,6 @@ public interface CommentRepository {
 
     Optional<Comment> find(String commentId);
 
-    List<Comment> findByAuthor(String author);
-
     void delete(String commentId);
 
     void deleteByMeme(String memeId);
