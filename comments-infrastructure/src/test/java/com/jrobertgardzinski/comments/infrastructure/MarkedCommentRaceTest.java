@@ -67,7 +67,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Testcontainers(disabledWithoutDocker = true)
 class MarkedCommentRaceTest {
 
-    private static final String LEAVER = "leaver@example.com";
     private static final UserId LEAVER_ID = UserId.random();
 
     @Container
@@ -103,8 +102,8 @@ class MarkedCommentRaceTest {
         // c1 is the leaver's own comment (oldest, so DeleteThread's allUnder visits it first);
         // c2 is somebody else's reply. A fan liked c1; the leaver liked c2 — the cross-vote that
         // puts the two transactions' lock order in opposition.
-        String c1 = savedComment(meme, LEAVER, LEAVER_ID, Instant.parse("2026-01-01T10:00:00Z"));
-        String c2 = savedComment(meme, "bob@example.com", UserId.random(), Instant.parse("2026-01-01T10:00:01Z"));
+        String c1 = savedComment(meme, LEAVER_ID, Instant.parse("2026-01-01T10:00:00Z"));
+        String c2 = savedComment(meme, UserId.random(), Instant.parse("2026-01-01T10:00:01Z"));
         castVote(c1, "fan@example.com", "UP");
         castVote(c2, LEAVER_ID.toString(), "UP");
         markForErasure(c1);
@@ -112,9 +111,9 @@ class MarkedCommentRaceTest {
         CountDownLatch purgeHoldsItsOwnVote = new CountDownLatch(1);
         CountDownLatch cascadeHoldsC1Vote = new CountDownLatch(1);
 
-        // T1: the saga's ERASE step. purgeVoter(LEAVER) is the FIRST thing PurgeUserComments does
+        // T1: the saga's ERASE step. purgeVoter(the leaver) is the FIRST thing PurgeUserComments does
         // (it must run before any score is read — see the use case's javadoc) and it locks the
-        // (c2, LEAVER) row; this override pauses right after, so T2 can grab (c1, fan) first.
+        // (c2, leaver) row; this override pauses right after, so T2 can grab (c1, fan) first.
         CommentVotes votesForPurge = new JdbcCommentVotes(jdbc) {
             @Override
             public void purgeVoter(String voter) {
@@ -210,11 +209,11 @@ class MarkedCommentRaceTest {
         }
     }
 
-    private static String savedComment(String memeId, String author, UserId authorId, Instant createdAt) {
+    private static String savedComment(String memeId, UserId authorId, Instant createdAt) {
         String id = UUID.randomUUID().toString();
-        jdbc.sql("INSERT INTO comments (id, meme_id, author, author_id, content, created_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?)")
-                .params(id, memeId, author, authorId.value(), "under race test", Timestamp.from(createdAt))
+        jdbc.sql("INSERT INTO comments (id, meme_id, author_id, content, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?)")
+                .params(id, memeId, authorId.value(), "under race test", Timestamp.from(createdAt))
                 .update();
         return id;
     }

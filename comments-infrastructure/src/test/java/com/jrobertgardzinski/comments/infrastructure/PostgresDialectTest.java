@@ -233,9 +233,9 @@ class PostgresDialectTest {
 
     private static String savedComment() {
         String id = UUID.randomUUID().toString();
-        jdbc.sql("INSERT INTO comments (id, meme_id, author, content, created_at)"
+        jdbc.sql("INSERT INTO comments (id, meme_id, author_id, content, created_at)"
                         + " VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)")
-                .params(id, UUID.randomUUID().toString(), "author@example.com", "under pg test")
+                .params(id, UUID.randomUUID().toString(), UUID.randomUUID(), "under pg test")
                 .update();
         return id;
     }
