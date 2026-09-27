@@ -31,8 +31,8 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public void save(Comment comment) {
-        jdbc.sql("INSERT INTO comments (id, meme_id, author, author_id, content, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-                .params(comment.id(), comment.memeId(), comment.author(),
+        jdbc.sql("INSERT INTO comments (id, meme_id, author_id, content, created_at) VALUES (?, ?, ?, ?, ?)")
+                .params(comment.id(), comment.memeId(),
                         comment.authorId().map(com.jrobertgardzinski.identity.UserId::value).orElse(null), comment.text(),
                         java.sql.Timestamp.from(Instant.now()))
                 .update();
@@ -40,13 +40,13 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public List<Comment> findByMeme(String memeId) {
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE meme_id = ? ORDER BY created_at")
+        return jdbc.sql("SELECT id, meme_id, author_id, content FROM active_comments WHERE meme_id = ? ORDER BY created_at")
                 .param(memeId).query(this::toComment).list();
     }
 
     @Override
     public List<Comment> findByMeme(String memeId, int offset, int limit) {
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE meme_id = ? "
+        return jdbc.sql("SELECT id, meme_id, author_id, content FROM active_comments WHERE meme_id = ? "
                         + "ORDER BY created_at LIMIT ? OFFSET ?")
                 .params(memeId, limit, offset).query(this::toComment).list();
     }
@@ -59,7 +59,7 @@ class JdbcCommentRepository implements CommentRepository {
 
     @Override
     public Optional<Comment> find(String commentId) {
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content FROM active_comments WHERE id = ?")
+        return jdbc.sql("SELECT id, meme_id, author_id, content FROM active_comments WHERE id = ?")
                 .param(commentId).query(this::toComment).optional();
     }
 
@@ -74,13 +74,14 @@ class JdbcCommentRepository implements CommentRepository {
     }
 
     @Override
-    public void reassignAuthor(String commentId, String newAuthor) {
-        // the id goes with the old author: kept content of a closed account is not groupable by it
-        jdbc.sql("UPDATE comments SET author = ?, author_id = NULL WHERE id = ?").params(newAuthor, commentId).update();
+    public void anonymise(String commentId) {
+        // nothing takes the id's place: kept words of a closed account belong to nobody, and
+        // cannot be grouped back together by the id of the account that is gone
+        jdbc.sql("UPDATE comments SET author_id = NULL WHERE id = ?").param(commentId).update();
     }
 
     private Comment toComment(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
-        return new Comment(rs.getString("id"), rs.getString("meme_id"), rs.getString("author"), authorIdOf(rs),
+        return new Comment(rs.getString("id"), rs.getString("meme_id"), authorIdOf(rs),
                 rs.getString("content"), com.jrobertgardzinski.comments.domain.CommentStatus.ACTIVE, null);
     }
 

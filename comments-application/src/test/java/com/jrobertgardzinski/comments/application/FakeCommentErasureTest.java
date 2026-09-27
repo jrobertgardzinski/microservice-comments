@@ -24,7 +24,7 @@ class FakeCommentErasureTest extends CommentErasureContractTest {
     }
 
     @Override
-    protected void givenActiveComment(String id, String author, Optional<UserId> authorId) {
-        comments.add(new Comment(id, "a-meme", author, authorId, "a comment", CommentStatus.ACTIVE, null));
+    protected void givenActiveComment(String id, Optional<UserId> authorId) {
+        comments.add(new Comment(id, "a-meme", authorId, "a comment", CommentStatus.ACTIVE, null));
     }
 }

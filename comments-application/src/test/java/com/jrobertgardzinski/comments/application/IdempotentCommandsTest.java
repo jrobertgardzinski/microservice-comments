@@ -40,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 @Feature("Idempotent commands")
 class IdempotentCommandsTest {
 
+    private static final UserId SOMEBODY = UserId.random();
+
     private static final UserId ALICE = UserId.random();
     private static final UserId BOB = UserId.random();
 
@@ -66,9 +68,10 @@ class IdempotentCommandsTest {
             public void deleteByMeme(String memeId) {
                 comments.removeIf(c -> c.memeId().equals(memeId));
             }
-            public void reassignAuthor(String commentId, String newAuthor) {
+            public void anonymise(String commentId) {
                 comments.replaceAll(c -> c.id().equals(commentId)
-                        ? new Comment(c.id(), c.memeId(), newAuthor, c.text()) : c);
+                        ? new Comment(c.id(), c.memeId(), Optional.empty(), c.text(),
+                            CommentStatus.ACTIVE, null) : c);
             }
         };
         final CommentVotes commentVotes = new CommentVotes() {
@@ -90,9 +93,9 @@ class IdempotentCommandsTest {
         };
 
         World() {
-            comments.add(new Comment("c1", "m1", "alice@example.com", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null));
-            comments.add(new Comment("c2", "m1", "bob@example.com", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
-            comments.add(new Comment("c3", "m2", "alice@example.com", Optional.of(ALICE), "elsewhere", CommentStatus.ACTIVE, null));
+            comments.add(new Comment("c1", "m1", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null));
+            comments.add(new Comment("c2", "m1", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
+            comments.add(new Comment("c3", "m2", Optional.of(ALICE), "elsewhere", CommentStatus.ACTIVE, null));
             votes.put("c1", new HashMap<>(Map.of("bob@example.com", VoteDirection.UP)));
             votes.put("c3", new HashMap<>(Map.of("bob@example.com", VoteDirection.DOWN)));
         }
@@ -209,10 +212,10 @@ class IdempotentCommandsTest {
     void add_comment_is_the_declared_exception() {
         World once = new World();
         MemeDirectory anyMeme = memeId -> true;
-        new AddComment(anyMeme, once.repository).execute("m1", "carol@example.com", "hello");
+        new AddComment(anyMeme, once.repository).execute("m1", SOMEBODY, "hello");
         World twice = new World();
-        new AddComment(anyMeme, twice.repository).execute("m1", "carol@example.com", "hello");
-        new AddComment(anyMeme, twice.repository).execute("m1", "carol@example.com", "hello");
+        new AddComment(anyMeme, twice.repository).execute("m1", SOMEBODY, "hello");
+        new AddComment(anyMeme, twice.repository).execute("m1", SOMEBODY, "hello");
         assertNotEquals(once.repository.countByMeme("m1"), twice.repository.countByMeme("m1"),
                 "two identical calls are two comments — the exception the ADR names, proven");
     }

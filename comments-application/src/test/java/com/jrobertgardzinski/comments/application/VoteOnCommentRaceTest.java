@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
@@ -26,8 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Story("Race with deletion")
 class VoteOnCommentRaceTest {
 
+    private static final UserId SOMEBODY = UserId.random();
+
     private static final Comment COMMENT =
-            new Comment("c1", "m1", "author@example.com", "soon to be gone");
+            new Comment("c1", "m1", SOMEBODY, "soon to be gone");
 
     private final CommentRepository repository = new CommentRepository() {
         public void save(Comment comment) { }
@@ -37,7 +40,7 @@ class VoteOnCommentRaceTest {
         public Optional<Comment> find(String commentId) { return Optional.of(COMMENT); }
         public void delete(String commentId) { }
         public void deleteByMeme(String memeId) { }
-        public void reassignAuthor(String commentId, String newAuthor) { }
+        public void anonymise(String commentId) { }
     };
 
     /** A store whose comment vanished between the check and the cast — the FK already refuses. */

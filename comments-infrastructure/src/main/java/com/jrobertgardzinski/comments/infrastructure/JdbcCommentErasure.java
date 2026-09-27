@@ -44,7 +44,7 @@ class JdbcCommentErasure implements CommentErasure {
     }
 
     private List<Comment> byAuthorId(UserId author, CommentStatus status) {
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE author_id = ? AND status = ?")
                 .params(author.value(), status.name())
                 .query(JdbcCommentErasure::toComment).list();
@@ -53,7 +53,7 @@ class JdbcCommentErasure implements CommentErasure {
 
     @Override
     public void store(Comment state) {
-        // the two erasure columns and nothing else: the text and the author are not this port's
+        // the two erasure columns and nothing else: the text and the author id are not this port's
         // business, and writing them back would let a stale copy overwrite the anonymisation that
         // this very saga performs a line later
         jdbc.sql("UPDATE comments SET status = ?, marked_for_erasure_at = ? WHERE id = ?")
@@ -71,7 +71,7 @@ class JdbcCommentErasure implements CommentErasure {
         // no status in the WHERE clause, and that is the whole point: the thread delete below it
         // destroys the base table's rows, marked ones included, so the cascade has to read them the
         // same way — otherwise it announces less than it took
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE meme_id = ? ORDER BY created_at")
                 .param(memeId)
                 .query(JdbcCommentErasure::toComment).list();
@@ -82,7 +82,7 @@ class JdbcCommentErasure implements CommentErasure {
         // the reaper's query in full — a status and an instant, served by
         // idx_comments_pending_erasure. Oldest first, because that is what an operator reading the
         // alarm needs to judge it.
-        return jdbc.sql("SELECT id, meme_id, author, author_id, content, status, marked_for_erasure_at "
+        return jdbc.sql("SELECT id, meme_id, author_id, content, status, marked_for_erasure_at "
                         + "FROM comments WHERE status = ? AND marked_for_erasure_at < ? "
                         + "ORDER BY marked_for_erasure_at")
                 .params(CommentStatus.PENDING_ERASURE.name(), Timestamp.from(cutoff))
@@ -91,7 +91,7 @@ class JdbcCommentErasure implements CommentErasure {
 
     private static Comment toComment(ResultSet rs, int rowNum) throws SQLException {
         Timestamp marked = rs.getTimestamp("marked_for_erasure_at");
-        return new Comment(rs.getString("id"), rs.getString("meme_id"), rs.getString("author"),
+        return new Comment(rs.getString("id"), rs.getString("meme_id"),
                 JdbcCommentRepository.authorIdOf(rs), rs.getString("content"), CommentStatus.valueOf(rs.getString("status")),
                 marked == null ? null : marked.toInstant());
     }

@@ -4,8 +4,7 @@
 CREATE TABLE comments (
     id                    VARCHAR(36)   PRIMARY KEY,
     meme_id               VARCHAR(36)   NOT NULL,
-    author                VARCHAR(255)  NOT NULL,      -- the address as an attribute: the placeholder once anonymised, never a key
-    author_id             UUID,                        -- the stable identity, the key; null once the row is anonymised
+    author_id             UUID,                        -- the only identity a row carries: the key; null once anonymised, and then it belongs to nobody
     content               VARCHAR(2000) NOT NULL,
     created_at            TIMESTAMP     NOT NULL,
     -- the account-closure saga's reversible mark: out of every thread, destroyed by nothing but the closure
@@ -20,7 +19,7 @@ CREATE INDEX idx_comments_pending_erasure ON comments (status, marked_for_erasur
 
 -- every public read goes through the view and never sees a marked comment
 CREATE VIEW active_comments AS
-    SELECT id, meme_id, author, author_id, content, created_at
+    SELECT id, meme_id, author_id, content, created_at
     FROM comments
     WHERE status = 'ACTIVE';
 

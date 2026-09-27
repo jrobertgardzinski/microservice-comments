@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.application.CommentErasure;
 import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.application.WatchErasureBacklog;
@@ -40,6 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Epic("Architecture")
 @Feature("Observability is a layer, not a dependency")
 class ObservabilityIsOptionalTest {
+
+    private static final UserId SOMEBODY = UserId.random();
 
     /**
      * The layers that must not name a tool — everything except the adapters. They are sibling
@@ -105,7 +108,7 @@ class ObservabilityIsOptionalTest {
     }
 
     private static CommentErasure holding(Instant markedAt) {
-        Comment marked = new Comment("c1", "m1", "leaver@example.com", "text").markForErasure(markedAt);
+        Comment marked = new Comment("c1", "m1", SOMEBODY, "text").markForErasure(markedAt);
         return new CommentErasure() {
 
             public List<Comment> activeOf(com.jrobertgardzinski.identity.UserId author) {

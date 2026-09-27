@@ -19,17 +19,15 @@ public class AddComment {
         this.commentRepository = commentRepository;
     }
 
-    /** Until every caller carries the id: a comment attributed by address alone. */
-    public Optional<Comment> execute(String memeId, String author, String text) {
-        return execute(memeId, author, Optional.empty(), text);
-    }
-
-    public Optional<Comment> execute(String memeId, String author, Optional<com.jrobertgardzinski.identity.UserId> authorId, String text) {
+    /**
+     * The author is an id. A token without one predates the cutover and is nobody here, so the gate
+     * refuses it before this is ever called.
+     */
+    public Optional<Comment> execute(String memeId, com.jrobertgardzinski.identity.UserId author, String text) {
         if (!memeDirectory.exists(memeId)) {
             return Optional.empty();
         }
-        Comment comment = new Comment(UUID.randomUUID().toString(), memeId, author, authorId, text,
-                com.jrobertgardzinski.comments.domain.CommentStatus.ACTIVE, null);
+        Comment comment = new Comment(UUID.randomUUID().toString(), memeId, author, text);
         commentRepository.save(comment);
         return Optional.of(comment);
     }

@@ -39,10 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>What is deliberately NOT forbidden, each for a recorded reason:
  * <ul>
- *   <li>{@code UPDATE comments SET author = ?, author_id = NULL WHERE id = ?} — a WRITE naming
- *       the address column. The address stays as an attribute (the placeholder "deleted account"
- *       is written into it), and a write is keyed by the row's own id, so it cannot match the
- *       wrong member.</li>
+ *   <li>nothing in this service writes an address any more: the column is gone, the anonymisation
+ *       only clears the id, and the name a thread shows is fetched from security at read time.</li>
  *   <li>{@code voter} on {@code comment_votes} holds the voter's id in its wire form (the 1e
  *       decision: the Ballots API was left untouched), so the word is not an address at all.</li>
  * </ul>
@@ -117,10 +115,11 @@ class RetiredAddressKeyTest {
         String schema = Files.readString(SCHEMA);
         assertFalse(schema.contains("user_email"),
                 "the user_email column went with the cutover; the id column is the key");
-        assertFalse(Pattern.compile("(?i)create\\s+index\\s+\\S+\\s+on\\s+\\w+\\s*\\(\\s*author\\s*\\)")
+        assertFalse(Pattern.compile("(?im)^\\s*author\\s+(VARCHAR|TEXT|CHAR)", Pattern.CASE_INSENSITIVE)
                         .matcher(schema).find(),
-                "an index on author alone is a key in all but name: it exists to look rows up by "
-                        + "address. The key is author_id.");
+                "the author column is gone: a comment carries the id of whoever wrote it and no "
+                        + "address at all, and a column back in the table is an address back in "
+                        + "the database");
         assertTrue(schema.contains("idx_comments_author_id"),
                 "the index the id is looked up by is gone, so the rule above is passing for the "
                         + "wrong reason: either the key moved, or the table did");

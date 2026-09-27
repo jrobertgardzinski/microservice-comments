@@ -33,8 +33,8 @@ class ListCommentsDegradationTest {
 
     private final CommentRepository repository = new CommentRepository() {
         private final List<Comment> comments = List.of(
-                new Comment("c1", "m1", "alice@example.com", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null),
-                new Comment("c2", "m1", "bob@example.com", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
+                new Comment("c1", "m1", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null),
+                new Comment("c2", "m1", Optional.of(BOB), "second", CommentStatus.ACTIVE, null));
 
         public void save(Comment comment) { }
         public List<Comment> findByMeme(String memeId) {
@@ -49,7 +49,7 @@ class ListCommentsDegradationTest {
         }
         public void delete(String commentId) { }
         public void deleteByMeme(String memeId) { }
-        public void reassignAuthor(String commentId, String newAuthor) { }
+        public void anonymise(String commentId) { }
     };
 
     private final CommentModeration noModeration = new CommentModeration() {

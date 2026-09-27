@@ -73,7 +73,6 @@ class CommentController {
 
     @PostMapping
     ResponseEntity<?> add(@PathVariable("memeId") String memeId,
-                          @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER) String author,
                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
                           com.jrobertgardzinski.identity.UserId authorId,
                           @RequestBody CommentRequest request) {
@@ -84,11 +83,11 @@ class CommentController {
             return ResponseEntity.badRequest().body(Map.of("status", "COMMENT_TOO_LONG",
                     "maxLength", Comment.MAX_LENGTH));
         }
-        if (!commentRate.tryAcquire(author)) {
+        if (!commentRate.tryAcquire(authorId.toString())) {
             return ResponseEntity.status(429).header("Retry-After", "60")
                     .body(Map.of("status", "RATE_LIMITED", "detail", "you are commenting too fast"));
         }
-        return addComment.execute(memeId, author, Optional.of(authorId), request.text())
+        return addComment.execute(memeId, authorId, request.text())
                 .<ResponseEntity<?>>map(comment ->
                         ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", comment.id())))
                 .orElseGet(() -> ResponseEntity.notFound().build());

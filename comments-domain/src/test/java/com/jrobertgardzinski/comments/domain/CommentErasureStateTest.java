@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.domain;
 
+import com.jrobertgardzinski.identity.UserId;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,8 +32,10 @@ class CommentErasureStateTest {
     private static final Instant FIRST_DELIVERY = Instant.parse("2026-08-08T10:00:00Z");
     private static final Instant REDELIVERY = FIRST_DELIVERY.plus(Duration.ofHours(1));
 
+    private static final UserId LEAVER = UserId.random();
+
     private static Comment inTheThread() {
-        return new Comment("c1", "m1", "leaver@example.com", "nice one");
+        return new Comment("c1", "m1", LEAVER, "nice one");
     }
 
     @Test
@@ -52,7 +56,7 @@ class CommentErasureStateTest {
         assertTrue(marked.isPendingErasure());
         assertEquals(FIRST_DELIVERY, marked.markedForErasureAt());
         assertEquals("nice one", marked.text(), "the words are still there — only hidden");
-        assertEquals("leaver@example.com", marked.author(),
+        assertEquals(Optional.of(LEAVER), marked.authorId(),
                 "and so is the authorship: anonymising is the ERASURE's job, not the mark's");
     }
 
@@ -92,8 +96,8 @@ class CommentErasureStateTest {
     @DisplayName("a mark without its instant — or an instant without its mark — cannot be built")
     void the_invariant_is_unrepresentable_not_merely_discouraged() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Comment("c1", "m1", "a@b.c", "hi", CommentStatus.PENDING_ERASURE, null));
+                () -> new Comment("c1", "m1", "hi", CommentStatus.PENDING_ERASURE, null));
         assertThrows(IllegalArgumentException.class,
-                () -> new Comment("c1", "m1", "a@b.c", "hi", CommentStatus.ACTIVE, FIRST_DELIVERY));
+                () -> new Comment("c1", "m1", "hi", CommentStatus.ACTIVE, FIRST_DELIVERY));
     }
 }

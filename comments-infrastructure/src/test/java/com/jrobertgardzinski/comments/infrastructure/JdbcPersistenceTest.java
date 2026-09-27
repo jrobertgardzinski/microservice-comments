@@ -39,6 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(classes = {CommentsApplication.class, TestAuthConfig.class})
 class JdbcPersistenceTest {
 
+    private static final UserId SOMEBODY = UserId.random();
+
     @Autowired
     CommentRepository comments;
     @Autowired
@@ -213,13 +215,13 @@ class JdbcPersistenceTest {
     }
 
     @Test
-    @DisplayName("anonymising drops the author id with the address")
+    @DisplayName("anonymising drops the author id, and there is nothing else to drop")
     void anonymising_drops_the_author_id() {
         String id = UUID.randomUUID().toString();
-        comments.save(new Comment(id, UUID.randomUUID().toString(), "leaver@example.com",
+        comments.save(new Comment(id, UUID.randomUUID().toString(),
                 Optional.of(UserId.random()), "under test", CommentStatus.ACTIVE, null));
 
-        comments.reassignAuthor(id, com.jrobertgardzinski.comments.domain.DeletedAccount.AUTHOR);
+        comments.anonymise(id);
 
         assertEquals(Optional.empty(), comments.find(id).orElseThrow().authorId(),
                 "kept content of a closed account must not be groupable by its old id");
@@ -228,7 +230,7 @@ class JdbcPersistenceTest {
     private String savedComment() {
         String id = UUID.randomUUID().toString();
         // a fresh meme id per comment keeps these rows out of the other suites' threads
-        comments.save(new Comment(id, UUID.randomUUID().toString(), "author@example.com", "under test"));
+        comments.save(new Comment(id, UUID.randomUUID().toString(), SOMEBODY, "under test"));
         return id;
     }
 

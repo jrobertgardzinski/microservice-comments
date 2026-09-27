@@ -68,9 +68,8 @@ repackaged; the three layers above it are plain, depend-able jars.
   at read time from security through `AuthorDirectory` (`GET /users?ids=`, masked, cached for 60 s);
   the thread still renders when that call fails, without names. "deleted account" is `author_id
   NULL` after an anonymising closure — kept words, not groupable by the id of the account that is
-  gone. `comments.author` survives as an attribute, the placeholder the anonymisation writes into,
-  and a build-time guard (`RetiredAddressKeyTest`) fails the suite on any query that turns it back
-  into a key. The confirmation still carries `reserved` — how many comments the mark actually took
+  gone. This service keeps no address at all, not even as an attribute, and a build-time guard
+  (`RetiredAddressKeyTest`) fails the suite if the column — or a query keyed by one — comes back. The confirmation still carries `reserved` — how many comments the mark actually took
   out of their threads — and a zero still raises `comments_saga_purge_reserved_nothing_total`
   instead of reading as a successful erasure: a closure that reserved nothing is either a member
   who wrote nothing or a mark that missed, and the two must not read alike.

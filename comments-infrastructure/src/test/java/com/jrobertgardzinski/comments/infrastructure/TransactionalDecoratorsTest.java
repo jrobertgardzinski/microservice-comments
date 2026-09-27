@@ -51,6 +51,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         TransactionalDecoratorsTest.FailingPorts.class})
 class TransactionalDecoratorsTest {
 
+    private static final UserId SOMEBODY = UserId.random();
+
     /**
      * The real JDBC ports, each with a detonator on the call that is the last step of its
      * teardown: {@code delete} ends DeleteComment, {@code purgeVoter} ends PurgeUserComments.
@@ -87,8 +89,8 @@ class TransactionalDecoratorsTest {
                     }
                     real.deleteByMeme(memeId);
                 }
-                public void reassignAuthor(String commentId, String newAuthor) {
-                    real.reassignAuthor(commentId, newAuthor);
+                public void anonymise(String commentId) {
+                    real.anonymise(commentId);
                 }
             };
         }
@@ -149,7 +151,7 @@ class TransactionalDecoratorsTest {
         String commentId = UUID.randomUUID().toString();
         String memeId = UUID.randomUUID().toString();
         UserId author = UserId.random();
-        repository.save(new Comment(commentId, memeId, "author@example.com", Optional.of(author),
+        repository.save(new Comment(commentId, memeId, Optional.of(author),
                 "doomed, but atomically", CommentStatus.ACTIVE, null));
         votes.cast(commentId, "fan@example.com", VoteDirection.UP);
         votes.cast(commentId, "hater@example.com", VoteDirection.DOWN);
@@ -167,13 +169,12 @@ class TransactionalDecoratorsTest {
     @Test
     @DisplayName("PurgeUserComments: a crash on the final voter purge rolls the anonymisation back")
     void purge_user_comments_is_atomic() {
-        String leaver = "leaver-" + UUID.randomUUID() + "@example.com";
         UserId leaverId = UserId.random();
         String first = UUID.randomUUID().toString();
         String second = UUID.randomUUID().toString();
-        repository.save(new Comment(first, UUID.randomUUID().toString(), leaver, Optional.of(leaverId), "one",
+        repository.save(new Comment(first, UUID.randomUUID().toString(), Optional.of(leaverId), "one",
                 CommentStatus.ACTIVE, null));
-        repository.save(new Comment(second, UUID.randomUUID().toString(), leaver, Optional.of(leaverId), "two",
+        repository.save(new Comment(second, UUID.randomUUID().toString(), Optional.of(leaverId), "two",
                 CommentStatus.ACTIVE, null));
 
         FailingPorts.failPurgeVoterOf.add(leaverId.toString());
@@ -184,10 +185,9 @@ class TransactionalDecoratorsTest {
         // restored the author — half an executed GDPR sweep is worse than a retried one
         for (String id : List.of(first, second)) {
             Comment restored = repository.find(id).orElseThrow();
-            assertEquals(leaver, restored.author(),
-                    "the anonymisation must be rolled back with the failed final step");
             assertEquals(Optional.of(leaverId), restored.authorId(),
-                    "the author id is what the row is keyed by: a rollback restores it too");
+                    "the anonymisation must be rolled back with the failed final step: the id is "
+                            + "what the row is keyed by");
         }
     }
 
@@ -234,7 +234,7 @@ class TransactionalDecoratorsTest {
     /** A comment straight into the store (this test is about teardown, not about posting). */
     private String comment(String memeId, String text) {
         String id = UUID.randomUUID().toString();
-        repository.save(new Comment(id, memeId, "author@example.com", text));
+        repository.save(new Comment(id, memeId, SOMEBODY, text));
         return id;
     }
 

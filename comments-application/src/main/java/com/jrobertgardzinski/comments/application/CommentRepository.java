@@ -24,7 +24,10 @@ public interface CommentRepository {
 
     void deleteByMeme(String memeId);
 
-    /** Replace one comment's author; the author id goes too, so kept content is not groupable by it. */
-
-    void reassignAuthor(String commentId, String newAuthor);
+    /**
+     * Cut one comment loose from its author: the account is gone, the thread keeps the words, and
+     * the row keeps no trace of whose they were. Nothing takes the id's place — a comment nobody
+     * owns has no author id, and the thread renders that as a deleted account.
+     */
+    void anonymise(String commentId);
 }

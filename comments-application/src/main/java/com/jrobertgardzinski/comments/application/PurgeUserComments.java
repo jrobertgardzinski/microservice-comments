@@ -3,7 +3,6 @@ package com.jrobertgardzinski.comments.application;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.DeletedAccount;
 
 import java.util.Optional;
 
@@ -55,7 +54,7 @@ public class PurgeUserComments {
         commentVotes.purgeVoter(author.toString());   // ballots are keyed by the voter's id, in its wire form
         for (Comment comment : erasure.pendingOf(author)) {
             if (rule.keeps(commentVotes.scoreOf(comment.id()))) {
-                commentRepository.reassignAuthor(comment.id(), DeletedAccount.AUTHOR);
+                commentRepository.anonymise(comment.id());
                 erasure.store(comment.restore());   // kept: back into the thread, anonymised
             } else {
                 commentVotes.purgeComment(comment.id());

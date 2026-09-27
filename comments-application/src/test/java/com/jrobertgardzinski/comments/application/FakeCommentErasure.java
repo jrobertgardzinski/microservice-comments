@@ -96,7 +96,7 @@ public class FakeCommentErasure implements CommentErasure {
         Instant marked = marks.get(comment.id());
         return marked == null
                 ? comment
-                : new Comment(comment.id(), comment.memeId(), comment.author(), comment.authorId(),
+                : new Comment(comment.id(), comment.memeId(), comment.authorId(),
                         comment.text(), CommentStatus.PENDING_ERASURE, marked);
     }
 }

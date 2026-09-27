@@ -33,10 +33,10 @@ public abstract class CommentErasureContractTest {
     protected abstract CommentErasure erasure();
 
     /** Put an ACTIVE comment in, however this implementation stores one. */
-    protected abstract void givenActiveComment(String id, String author, Optional<UserId> authorId);
+    protected abstract void givenActiveComment(String id, Optional<UserId> authorId);
 
     private void givenActiveComment(String id, UserId author) {
-        givenActiveComment(id, "someone+" + run + "@example.com", Optional.of(author));
+        givenActiveComment(id, Optional.of(author));
     }
 
     private Comment theOnly(List<Comment> found) {
@@ -61,13 +61,14 @@ public abstract class CommentErasureContractTest {
     }
 
     @Test
-    @DisplayName("the id is the key: the address a row was written under plays no part")
+    @DisplayName("the id is the key, and a row without one belongs to nobody")
     protected void rows_are_keyed_by_the_authors_id() {
-        givenActiveComment(first, "old+" + run + "@example.com", Optional.of(alice));
-        givenActiveComment(second, "new+" + run + "@example.com", Optional.of(alice));
-        givenActiveComment(third, "old+" + run + "@example.com", Optional.empty());
+        givenActiveComment(first, Optional.of(alice));
+        givenActiveComment(second, Optional.of(alice));
+        givenActiveComment(third, Optional.empty());
 
-        assertEquals(2, erasure().activeOf(alice).size(), "both addresses, one person");
+        assertEquals(2, erasure().activeOf(alice).size(), "two rows, one person");
+        assertEquals(List.of(), erasure().activeOf(bob), "and the anonymised row is nobody's");
     }
 
     @Test
@@ -85,18 +86,18 @@ public abstract class CommentErasureContractTest {
 
     @Test
     @DisplayName("store writes the ERASURE state and nothing else — the author is not this port's business")
-    protected void store_does_not_write_the_author() {
+    protected void store_does_not_write_the_author_id() {
         givenActiveComment(first, alice);
         Comment held = theOnly(erasure().activeOf(alice));
 
         // a stale copy carrying somebody else's identity — which is what the closure hands over a
-        // line after it has anonymised the row. If this port wrote the author back, the
+        // line after it has anonymised the row. If this port wrote the author id back, the
         // anonymisation would be undone by the very next call
-        erasure().store(new Comment(held.id(), held.memeId(), "somebody.else+" + run + "@example.com",
+        erasure().store(new Comment(held.id(), held.memeId(),
                 Optional.of(bob), held.text(), held.markForErasure(NOON).status(), NOON));
 
         assertEquals(List.of(), erasure().pendingOf(bob),
-                "the author moved: this port wrote a column that is not its own");
+                "the author id moved: this port wrote a column that is not its own");
         assertEquals(first, theOnly(erasure().pendingOf(alice)).id());
     }
 

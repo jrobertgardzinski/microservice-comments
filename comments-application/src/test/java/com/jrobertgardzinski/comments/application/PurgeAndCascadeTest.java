@@ -4,7 +4,6 @@ import com.jrobertgardzinski.comments.domain.CommentStatus;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.DeletedAccount;
 import com.jrobertgardzinski.voting.VoteDirection;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -23,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Epic("Use case")
 @Feature("Purge and thread cascade")
 class PurgeAndCascadeTest {
+
+    private static final UserId SOMEBODY = UserId.random();
 
     private static final UserId LEAVER = UserId.random();
 
@@ -59,9 +60,10 @@ class PurgeAndCascadeTest {
             comments.removeIf(c -> c.memeId().equals(memeId));
         }
 
-        public void reassignAuthor(String commentId, String newAuthor) {
+        public void anonymise(String commentId) {
             comments.replaceAll(c -> c.id().equals(commentId)
-                    ? new Comment(c.id(), c.memeId(), newAuthor, c.text()) : c);
+                    ? new Comment(c.id(), c.memeId(), Optional.empty(), c.text(),
+                            CommentStatus.ACTIVE, null) : c);
         }
     };
     private final CommentVotes commentVotes = new CommentVotes() {
@@ -100,8 +102,8 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("default purge keeps texts as 'deleted account'; KEEP_POPULAR decides by score")
     void purge_honours_the_rules() {
-        comments.add(new Comment("praised", "m1", "leaver@example.com", Optional.of(LEAVER), "keeper", CommentStatus.ACTIVE, null));
-        comments.add(new Comment("ignored", "m1", "leaver@example.com", Optional.of(LEAVER), "goner", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("praised", "m1", Optional.of(LEAVER), "keeper", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("ignored", "m1", Optional.of(LEAVER), "goner", CommentStatus.ACTIVE, null));
         votes.put("praised", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
 
         // the saga in full: the reversible mark, then the orchestrator's closure
@@ -111,7 +113,7 @@ class PurgeAndCascadeTest {
 
         assertEquals(1, comments.size());
         assertEquals("keeper", comments.get(0).text());
-        assertEquals(DeletedAccount.AUTHOR, comments.get(0).author());
+        assertEquals(Optional.empty(), comments.get(0).authorId(), "kept, and nobody's");
         assertTrue(!votes.containsKey("ignored"));
         assertTrue(!erasure.isMarked("praised"),
                 "a comment the rule keeps belongs back in the thread, not in the erasure backlog");
@@ -120,7 +122,7 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("a comment kept only by the leaver's own vote is not what the community liked")
     void the_leavers_own_votes_do_not_count_towards_the_threshold() {
-        comments.add(new Comment("self-liked", "m1", "leaver@example.com", Optional.of(LEAVER), "praise from the author", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("self-liked", "m1", Optional.of(LEAVER), "praise from the author", CommentStatus.ACTIVE, null));
         // two votes, one of them the leaver's own — and his is leaving with him, so the community's
         // verdict on this comment is ONE. Counting his made the threshold of two look met.
         votes.put("self-liked", new HashMap<>(Map.of(
@@ -137,7 +139,7 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("the mark hides the leaver's comments and destroys nothing")
     void the_mark_is_reversible() {
-        comments.add(new Comment("reserved", "m1", "leaver@example.com", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("reserved", "m1", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
         votes.put("reserved", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
 
         mark.execute(LEAVER);
@@ -150,20 +152,20 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("the compensation puts the conversation back exactly as it was")
     void restore_undoes_the_mark() {
-        comments.add(new Comment("reserved", "m1", "leaver@example.com", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("reserved", "m1", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
         mark.execute(LEAVER);
 
         restore.execute(LEAVER);
 
         assertTrue(!erasure.isMarked("reserved"));
-        assertEquals("leaver@example.com", comments.get(0).author());
+        assertEquals(Optional.of(LEAVER), comments.get(0).authorId(), "and still theirs");
         assertEquals("still here", comments.get(0).text());
     }
 
     @Test
     @DisplayName("a closure that arrives without a mark erases nothing")
     void the_closure_only_acts_on_what_the_mark_reserved() {
-        comments.add(new Comment("never-marked", "m1", "leaver@example.com", Optional.of(LEAVER), "untouched", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("never-marked", "m1", Optional.of(LEAVER), "untouched", CommentStatus.ACTIVE, null));
 
         new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.Delete())
                 .execute(LEAVER, Optional.empty());
@@ -175,9 +177,9 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("a deleted meme's whole thread goes, votes included")
     void thread_cascade() {
-        comments.add(new Comment("c1", "gone-meme", "a@example.com", "one"));
-        comments.add(new Comment("c2", "gone-meme", "b@example.com", "two"));
-        comments.add(new Comment("c3", "other", "a@example.com", "stays"));
+        comments.add(new Comment("c1", "gone-meme", SOMEBODY, "one"));
+        comments.add(new Comment("c2", "gone-meme", SOMEBODY, "two"));
+        comments.add(new Comment("c3", "other", SOMEBODY, "stays"));
         votes.put("c1", new HashMap<>(Map.of("x@example.com", VoteDirection.UP)));
 
         List<String> dropped = new DeleteThread(repository, erasure, commentVotes).execute("gone-meme");
@@ -192,7 +194,7 @@ class PurgeAndCascadeTest {
     @Test
     @DisplayName("a meme nobody commented on reports nothing to pass on")
     void thread_cascade_on_an_empty_thread() {
-        comments.add(new Comment("c1", "other", "a@example.com", "stays"));
+        comments.add(new Comment("c1", "other", SOMEBODY, "stays"));
 
         assertEquals(List.of(), new DeleteThread(repository, erasure, commentVotes).execute("quiet-meme"),
                 "no comments went, so there is no fact to announce (and a rerun says the same)");

@@ -22,16 +22,13 @@ import java.util.Optional;
  * mark is what the erasure backlog is watched by, and a redelivered command must not make an old
  * obligation look new.
  */
-public record Comment(String id, String memeId, String author, Optional<UserId> authorId, String text,
+public record Comment(String id, String memeId, Optional<UserId> authorId, String text,
                       CommentStatus status, Instant markedForErasureAt) {
 
     /** The longest a comment may be. A hard domain rule, not server policy. */
     public static final int MAX_LENGTH = 2000;
 
     public Comment {
-        if (author.isBlank()) {
-            throw new IllegalArgumentException("author must not be blank");
-        }
         if (text.isBlank()) {
             throw new IllegalArgumentException("text must not be blank");
         }
@@ -48,14 +45,14 @@ public record Comment(String id, String memeId, String author, Optional<UserId> 
     }
 
     /** A comment in its thread — the shorthand for everything that is not an erasure. */
-    /** A row that predates the author id, or a test that does not care about it. */
-    public Comment(String id, String memeId, String author, String text, CommentStatus status,
-                   Instant markedForErasureAt) {
-        this(id, memeId, author, Optional.empty(), text, status, markedForErasureAt);
+    public Comment(String id, String memeId, UserId author, String text) {
+        this(id, memeId, Optional.of(author), text, CommentStatus.ACTIVE, null);
     }
 
-    public Comment(String id, String memeId, String author, String text) {
-        this(id, memeId, author, Optional.empty(), text, CommentStatus.ACTIVE, null);
+    /** An anonymised row: the account is gone, the words stayed, and they belong to nobody. */
+    public Comment(String id, String memeId, String text, CommentStatus status,
+                   Instant markedForErasureAt) {
+        this(id, memeId, Optional.empty(), text, status, markedForErasureAt);
     }
 
     /**
@@ -65,7 +62,7 @@ public record Comment(String id, String memeId, String author, Optional<UserId> 
     public Comment markForErasure(Instant at) {
         return status == CommentStatus.PENDING_ERASURE
                 ? this
-                : new Comment(id, memeId, author, authorId, text, CommentStatus.PENDING_ERASURE, at);
+                : new Comment(id, memeId, authorId, text, CommentStatus.PENDING_ERASURE, at);
     }
 
     /**
@@ -75,7 +72,7 @@ public record Comment(String id, String memeId, String author, Optional<UserId> 
     public Comment restore() {
         return status == CommentStatus.ACTIVE
                 ? this
-                : new Comment(id, memeId, author, authorId, text, CommentStatus.ACTIVE, null);
+                : new Comment(id, memeId, authorId, text, CommentStatus.ACTIVE, null);
     }
 
     /** Whether a running saga has this comment reserved for erasure. */
