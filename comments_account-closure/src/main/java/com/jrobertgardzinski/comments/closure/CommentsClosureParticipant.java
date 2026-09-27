@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.closure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.closure.Atomically;
+import com.jrobertgardzinski.closure.UnitOfWork;
 import com.jrobertgardzinski.closure.ClosureCommand;
 import com.jrobertgardzinski.closure.ClosureConfirmations;
 import com.jrobertgardzinski.closure.ClosureMessages;
@@ -35,20 +35,20 @@ public final class CommentsClosureParticipant {
     private final PurgeUserComments purgeUserComments;
     private final ClosureConfirmations confirmations;
     private final Observations<Observation> observations;
-    private final Atomically atomically;
+    private final UnitOfWork unitOfWork;
 
     public CommentsClosureParticipant(MarkUserCommentsForErasure markForErasure,
                                       RestoreUserComments restoreUserComments,
                                       PurgeUserComments purgeUserComments,
                                       ClosureConfirmations confirmations,
                                       Observations<Observation> observations,
-                                      Atomically atomically) {
+                                      UnitOfWork unitOfWork) {
         this.markForErasure = markForErasure;
         this.restoreUserComments = restoreUserComments;
         this.purgeUserComments = purgeUserComments;
         this.confirmations = confirmations;
         this.observations = observations;
-        this.atomically = atomically;
+        this.unitOfWork = unitOfWork;
     }
 
     public ClosureOutcome handle(ClosureCommand command) {
@@ -71,12 +71,12 @@ public final class CommentsClosureParticipant {
             }
             case ERASE -> {
                 Optional<PurgeRule> rule = requestedRule(command);   // pure reading, kept outside the step
-                atomically.run(() -> purgeUserComments.execute(leaver, rule));
+                unitOfWork.run(() -> purgeUserComments.execute(leaver, rule));
                 LOG.info("erased one leaver's marked comments on the saga's closure (saga {})", sagaId);
                 yield new ClosureOutcome.Erased();
             }
             case RESTORE -> {
-                atomically.run(() -> restoreUserComments.execute(leaver));
+                unitOfWork.run(() -> restoreUserComments.execute(leaver));
                 LOG.info("restored one leaver's comments: the saga compensated (saga {})", sagaId);
                 yield new ClosureOutcome.Restored();
             }
@@ -87,7 +87,7 @@ public final class CommentsClosureParticipant {
     /** The confirmation is made INSIDE the unit of work: hidden comments with no word owed is the failure mode. */
     private int markAndConfirm(String sagaId, UserId leaver) {
         AtomicInteger reserved = new AtomicInteger();
-        atomically.run(() -> {
+        unitOfWork.run(() -> {
             int marked = markForErasure.execute(leaver);
             confirmations.confirm(sagaId, leaver, marked);
             reserved.set(marked);
