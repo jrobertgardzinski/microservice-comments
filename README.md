@@ -61,16 +61,19 @@ repackaged; the three layers above it are plain, depend-able jars.
   leaver's comments under this service's axis of the policy (`DELETE` | `ANONYMIZE_AUTHOR` |
   `KEEP_POPULAR_ANONYMIZED:<n>`; wizard override wins over the `PURGE_COMMENTS_POLICY` default);
   the confirmation goes back on `comments-events`. Votes the leaver cast are always retracted.
-- **microservice-security, the other direction** — a member's address can move, and their words move
-  with it. Everything here is keyed by the address the token carried at the time (`comments.author`,
-  `comment_votes.voter`), so when security confirms a change of address it announces `EMAIL_CHANGED`
-  on `security-events` and this service re-keys those rows (`SecurityEventsListener` →
-  `RekeyUserComments`). Without it a member was a stranger to their own thread (`own:false`, a
-  `DELETE` of their own comment 403) and their deletion marked nothing while confirming an erasure,
-  leaving the words to whoever registered the freed address next. The two topics are independent, so
-  a deletion can still overtake a rename; that is why the confirmation carries `reserved` — how many
-  comments the mark actually took out of their threads — and why a zero raises
-  `comments_saga_purge_reserved_nothing_total` instead of reading as a successful erasure.
+- **microservice-security, the other direction** — a member's address can move, and their words
+  stay exactly where they are. Every row is keyed by the member's id (`comments.author_id`, and
+  `comment_votes.voter`, which holds the voter's id in its wire form), so a rename touches no row
+  here and there is no topic to carry one (workspace ADR 0008). The name a thread shows is fetched
+  at read time from security through `AuthorDirectory` (`GET /users?ids=`, masked, cached for 60 s);
+  the thread still renders when that call fails, without names. "deleted account" is `author_id
+  NULL` after an anonymising closure — kept words, not groupable by the id of the account that is
+  gone. `comments.author` survives as an attribute, the placeholder the anonymisation writes into,
+  and a build-time guard (`RetiredAddressKeyTest`) fails the suite on any query that turns it back
+  into a key. The confirmation still carries `reserved` — how many comments the mark actually took
+  out of their threads — and a zero still raises `comments_saga_purge_reserved_nothing_total`
+  instead of reading as a successful erasure: a closure that reserved nothing is either a member
+  who wrote nothing or a mark that missed, and the two must not read alike.
 
 ## Contract
 
