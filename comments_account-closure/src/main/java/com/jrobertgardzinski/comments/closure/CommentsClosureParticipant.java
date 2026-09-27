@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.closure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.closure.UnitOfWork;
+import com.jrobertgardzinski.unitofwork.UnitOfWork;
 import com.jrobertgardzinski.closure.ClosureCommand;
 import com.jrobertgardzinski.closure.ClosureConfirmations;
 import com.jrobertgardzinski.closure.ClosureMessages;

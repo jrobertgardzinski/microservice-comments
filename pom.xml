@@ -107,6 +107,12 @@
                 <artifactId>observation</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
             </dependency>
+            <!-- the promise the mark and its confirmation commit together -->
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>unit-of-work</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
             <dependency>
                 <!-- the words this service shares with identity and the orchestrator when an account
                      closes: the command names and who asked for the closure -->
