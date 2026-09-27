@@ -41,6 +41,10 @@ jobs:
           path: unit-of-work
       - uses: actions/checkout@v7
         with:
+          repository: jrobertgardzinski/meme-deletion
+          path: meme-deletion
+      - uses: actions/checkout@v7
+        with:
           repository: jrobertgardzinski/account-closure
           path: account-closure
       - uses: actions/checkout@v7
@@ -92,6 +96,7 @@ jobs:
           mvn -B -q --no-transfer-progress -f author-directory/pom.xml install -DskipTests
           # account-closure speaks UserId, so user-id is installed before it, not after
           mvn -B -q --no-transfer-progress -f unit-of-work/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f meme-deletion/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f account-closure/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests

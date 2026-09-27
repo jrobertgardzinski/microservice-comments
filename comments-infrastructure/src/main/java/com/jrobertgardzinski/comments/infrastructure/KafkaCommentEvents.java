@@ -1,8 +1,10 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.jrobertgardzinski.comments.application.CommentEvents;
+import com.jrobertgardzinski.deletion.CommentsDeleted;
+import com.jrobertgardzinski.deletion.DeletionMessages;
 import com.jrobertgardzinski.outbox.OutboxEvent;
 import com.jrobertgardzinski.outbox.spring.SpringOutbox;
 import org.slf4j.MDC;
@@ -53,7 +55,7 @@ class KafkaCommentEvents implements CommentEvents {
      */
     static final String TOPIC = "comments-events";
 
-    static final String COMMENTS_DELETED = "COMMENTS_DELETED";
+    static final String COMMENTS_DELETED = DeletionMessages.COMMENTS_DELETED;
 
     private final SpringOutbox outbox;
     private final ObjectMapper mapper;
@@ -83,14 +85,12 @@ class KafkaCommentEvents implements CommentEvents {
      */
     OutboxEvent announcementOf(String memeId, List<String> commentIds) {
         String eventId = OutboxEvent.newId();
-        ObjectNode event = mapper.createObjectNode()
-                .put("id", eventId)
-                .put("type", COMMENTS_DELETED)
-                .put("memeId", memeId);
-        ArrayNode ids = event.putArray("commentIds");
-        commentIds.forEach(ids::add);
-        // envelope version (workspace ADR 0004): fields only ever added within version 1
-        event.put("version", 1);
+        // the field set is the library's, not this adapter's: add a field to the agreement and
+        // both producers of this message gain it in the same commit
+        // constructed, not re-parsed: the participant only ever hands over ids that already
+        // came through MemeDeleted.of and this service's own store
+        ObjectNode event = mapper.valueToTree(new CommentsDeleted(memeId, commentIds, 0).fields());
+        event.put(DeletionMessages.Field.ID, eventId);
 
         String payload;
         try {

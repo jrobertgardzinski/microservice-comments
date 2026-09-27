@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 

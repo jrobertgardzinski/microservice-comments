@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import au.com.dius.pact.consumer.MessagePactBuilder;
 import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
@@ -55,7 +56,7 @@ class MemeDeletedContractTest {
         return builder.expectsToReceive("a meme deleted announcement for the comment thread")
                 .withContent(new PactDslJsonBody()
                         .stringValue("type", "MEME_DELETED")
-                        .stringType("memeId", "known-meme"))
+                        .stringType("memeId", "3f2b7c58-9a41-4d0e-b6c7-15e8d9a0b2c3"))
                 .toPact();
     }
 
@@ -67,6 +68,6 @@ class MemeDeletedContractTest {
 
         listener.receive(messages.get(0).contentsAsString(), null);
 
-        verify(deleteThread).execute("known-meme");
+        verify(deleteThread).execute("3f2b7c58-9a41-4d0e-b6c7-15e8d9a0b2c3");
     }
 }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.jrobertgardzinski</groupId>
+        <artifactId>microservice-comments</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>comments_meme-deletion</artifactId>
+
+    <!--
+      This service's side of the portal's SECOND cross-service process: deleting a meme. Read
+      this module and you know what happens to a meme's conversation when the meme goes — the
+      thread is dropped, and the comments that went are named to whoever else held them — without
+      first deciding whether the portal is a monolith or six services.
+
+      The underscore is the same point comments_account-closure makes: `comments-<x>` is a LAYER,
+      `comments_<x>` is this service's part in a process it shares with others, named after the
+      library the participants speak through. Nothing in here knows Kafka, JSON or Spring; the
+      adapter that carries the events does, and lives next door in comments-infrastructure.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-application</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain</artifactId>
+        </dependency>
+        <dependency>
+            <!-- the words the three services share when a meme is deleted -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>meme-deletion</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>unit-of-work</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+</project>

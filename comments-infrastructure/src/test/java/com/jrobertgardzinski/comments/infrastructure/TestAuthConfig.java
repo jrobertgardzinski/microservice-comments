@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.comments.application.DeleteThread;
@@ -35,7 +36,8 @@ public class TestAuthConfig {
     public static final String MODERATOR_TOKEN = "test-token-mod";
     public static final String MODERATOR_USER = "mod@example.com";
     public static final UserId MODERATOR_USER_ID = UserId.of("33333333-3333-4333-8333-333333333333");
-    public static final String EXISTING_MEME = "known-meme";
+    /** A real id, because the cascade's contract only accepts one: see MemeDeleted.of. */
+    public static final String EXISTING_MEME = "3f2b7c58-9a41-4d0e-b6c7-15e8d9a0b2c3";
     /** Alice's old address under a brand-new account: somebody else. */
     public static final String IMPOSTOR_TOKEN = "test-token-impostor";
 
