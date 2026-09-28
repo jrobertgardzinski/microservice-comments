@@ -1,8 +1,9 @@
 name: CI
 
-# microservice-comments needs two sibling SNAPSHOTs (voting and purge-rule, both public), so
-# CI checks them out and
-# installs it first. Checkouts use the workspace layout (each repo in its own directory) because
+# microservice-comments needs sibling SNAPSHOTs from two places — the shared kernel (voting and
+# the rest) and portal-libs, the portal's own vocabulary — so CI checks them out and installs them
+# first. portal-libs goes last: it depends on the kernel, and nothing in the kernel depends on it.
+# Checkouts use the workspace layout (each repo in its own directory) because
 # both provider tests verify a neighbour's committed pact from its sibling checkout — offboarding's
 # saga confirmation and user-collections' COMMENTS_DELETED cascade. A consumer that is not cloned
 # does not fail the verification, it SKIPS it, so every consumer whose pact this repo is meant to
@@ -28,10 +29,6 @@ jobs:
           path: voting
       - uses: actions/checkout@v7
         with:
-          repository: jrobertgardzinski/purge-rule
-          path: purge-rule
-      - uses: actions/checkout@v7
-        with:
           repository: jrobertgardzinski/observation
           path: observation
       # the closure vocabulary shared with identity and the orchestrator
@@ -41,20 +38,12 @@ jobs:
           path: unit-of-work
       - uses: actions/checkout@v7
         with:
-          repository: jrobertgardzinski/meme-deletion
-          path: meme-deletion
-      - uses: actions/checkout@v7
-        with:
           repository: jrobertgardzinski/account-closure
           path: account-closure
       - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/user-id
           path: user-id
-      - uses: actions/checkout@v7
-        with:
-          repository: jrobertgardzinski/author-directory
-          path: author-directory
       - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/offline-jwt
@@ -73,6 +62,11 @@ jobs:
       # CommentsDeletedPactProviderTest was @EnabledIf-skipped on every CI run — under a step
       # called "including pact provider verification" — and SilentlySkippedPactTest could not
       # complain either, because its assumeTrue on the missing directory made IT skip too.
+      # the portal's own vocabulary: one repository since 2026-09-28, three before that
+      - uses: actions/checkout@v7
+        with:
+          repository: jrobertgardzinski/portal-libs
+          path: portal-libs
       - uses: actions/checkout@v7
         with:
           repository: jrobertgardzinski/microservice-offboarding
@@ -90,17 +84,15 @@ jobs:
       - name: Install the shared libraries
         run: |
           mvn -B -q --no-transfer-progress -f voting/pom.xml install -DskipTests
-          mvn -B -q --no-transfer-progress -f purge-rule/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f observation/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f user-id/pom.xml install -DskipTests
-          mvn -B -q --no-transfer-progress -f author-directory/pom.xml install -DskipTests
           # account-closure speaks UserId, so user-id is installed before it, not after
           mvn -B -q --no-transfer-progress -f unit-of-work/pom.xml install -DskipTests
-          mvn -B -q --no-transfer-progress -f meme-deletion/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f account-closure/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f offline-jwt/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f transactional-outbox/pom.xml install -DskipTests
           mvn -B -q --no-transfer-progress -f infrastructure-spring-outbox/pom.xml install -DskipTests
+          mvn -B -q --no-transfer-progress -f portal-libs/pom.xml install -DskipTests
       - name: Build and test (including pact provider verification)
         run: mvn -B --no-transfer-progress -f microservice-comments/pom.xml clean verify
 
