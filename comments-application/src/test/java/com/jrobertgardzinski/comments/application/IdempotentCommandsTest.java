@@ -74,23 +74,7 @@ class IdempotentCommandsTest {
                             CommentStatus.ACTIVE, null) : c);
             }
         };
-        final CommentVotes commentVotes = new CommentVotes() {
-            public void cast(String commentId, String voter, VoteDirection direction) {
-                votes.computeIfAbsent(commentId, id -> new HashMap<>()).put(voter, direction);
-            }
-            public void retract(String commentId, String voter) {
-                votes.getOrDefault(commentId, Map.of()).remove(voter);
-            }
-            public Optional<VoteDirection> voteOf(String commentId, String voter) {
-                return Optional.ofNullable(votes.getOrDefault(commentId, Map.of()).get(voter));
-            }
-            public int scoreOf(String commentId) {
-                return votes.getOrDefault(commentId, Map.of()).values().stream()
-                        .mapToInt(d -> d == VoteDirection.UP ? 1 : -1).sum();
-            }
-            public void purgeComment(String commentId) { votes.remove(commentId); }
-            public void purgeVoter(String voter) { votes.values().forEach(v -> v.remove(voter)); }
-        };
+        final CommentVotes commentVotes = new FakeCommentVotes(votes);
 
         World() {
             comments.add(new Comment("c1", "m1", Optional.of(ALICE), "first", CommentStatus.ACTIVE, null));
