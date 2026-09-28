@@ -6,6 +6,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
@@ -66,8 +67,8 @@ class PurgeRetriesTest {
     private final PurgeConfirmations confirmations = mock(PurgeConfirmations.class);
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
-            mock(RestoreUserComments.class), purgeUserComments, confirmations,
-            Observations.silent(), new ObjectMapper(), NoTransactions.template());
+            mock(RestoreUserComments.class), purgeUserComments, mock(CommentEvents.class),
+            confirmations, Observations.silent(), new ObjectMapper(), NoTransactions.template());
 
     private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     private final DefaultErrorHandler errorHandler = SagaParticipantConfig.errorHandler(

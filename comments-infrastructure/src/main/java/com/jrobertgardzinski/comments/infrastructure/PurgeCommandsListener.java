@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.closure.ClosureCommand;
 import com.jrobertgardzinski.closure.ClosureMessages;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
@@ -58,12 +59,16 @@ class PurgeCommandsListener {
 
     PurgeCommandsListener(MarkUserCommentsForErasure markForErasure,
                           RestoreUserComments restoreUserComments,
-                          PurgeUserComments purgeUserComments, PurgeConfirmations confirmations,
+                          PurgeUserComments purgeUserComments, CommentEvents commentEvents,
+                          PurgeConfirmations confirmations,
                           Observations<Observation> observations,
                           ObjectMapper mapper, TransactionTemplate tx) {
         this.mapper = mapper;
+        // the SAME CommentEvents the cascade hop next door publishes through: an account closure
+        // destroys comments other people saved, and that pointer goes the way it goes when a meme's
+        // thread is dropped. Inside this class's transaction, so it shares the delete's fate.
         this.participant = new CommentsClosureParticipant(markForErasure, restoreUserComments,
-                purgeUserComments, confirmations::confirm, observations,
+                purgeUserComments, commentEvents, confirmations::confirm, observations,
                 step -> tx.executeWithoutResult(status -> step.run()));
     }
 

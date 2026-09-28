@@ -7,6 +7,7 @@ import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvide
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
@@ -67,8 +68,8 @@ class PurgeConfirmationPactProviderTest {
         CapturedConfirmations confirmations = new CapturedConfirmations();
         PurgeCommandsListener listener = new PurgeCommandsListener(
                 mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
-                mock(PurgeUserComments.class), confirmations, Observations.silent(),
-                new ObjectMapper(), NoTransactions.template());
+                mock(PurgeUserComments.class), mock(CommentEvents.class), confirmations,
+                Observations.silent(), new ObjectMapper(), NoTransactions.template());
         listener.receive("{\"type\":\"PURGE_USER_CONTENT\","
                 + "\"sagaId\":\"7d9f9e2a-1f0a-4f6e-9a1b-2c3d4e5f6a7b\","
                 + "\"userId\":\"0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f\"}", null);

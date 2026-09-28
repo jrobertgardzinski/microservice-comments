@@ -73,7 +73,8 @@ class CommentsEventsTopicTest {
 
     private final PurgeCommandsListener saga = new PurgeCommandsListener(
             mock(MarkUserCommentsForErasure.class), mock(RestoreUserComments.class),
-            purgeUserComments, new PurgeConfirmations(db.outbox(), mapper), Observations.silent(),
+            purgeUserComments, new KafkaCommentEvents(db.outbox(), mapper),
+            new PurgeConfirmations(db.outbox(), mapper), Observations.silent(),
             mapper, db.tx());
     private final MemesEventsListener cascade = new MemesEventsListener(deleteThread,
             new KafkaCommentEvents(db.outbox(), mapper), mapper, db.tx());

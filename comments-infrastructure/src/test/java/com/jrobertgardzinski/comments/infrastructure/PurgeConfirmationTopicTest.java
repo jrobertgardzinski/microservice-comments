@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
@@ -44,7 +45,8 @@ class PurgeConfirmationTopicTest {
     private static ProducerRecord<String, String> realConfirmation() throws Exception {
         CapturedConfirmations confirmations = new CapturedConfirmations();
         new PurgeCommandsListener(mock(MarkUserCommentsForErasure.class),
-                mock(RestoreUserComments.class), mock(PurgeUserComments.class), confirmations,
+                mock(RestoreUserComments.class), mock(PurgeUserComments.class),
+                mock(CommentEvents.class), confirmations,
                 Observations.silent(), new ObjectMapper(), NoTransactions.template())
                 .receive("{\"type\":\"PURGE_USER_CONTENT\",\"sagaId\":\"" + SAGA + "\","
                         + "\"userId\":\"0b7c1c2e-5d3a-4f1b-9e8d-6a5b4c3d2e1f\"}", null);

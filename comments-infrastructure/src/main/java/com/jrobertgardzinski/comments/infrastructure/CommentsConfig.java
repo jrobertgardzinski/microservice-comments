@@ -122,8 +122,11 @@ class CommentsConfig {
         // the whole GDPR sweep is one unit: a crash mid-purge must not leave half an account gone
         return new PurgeUserComments(commentRepository, erasure, commentVotes, defaultCommentsPurgeRule) {
             @Override
-            public void execute(com.jrobertgardzinski.identity.UserId author, Optional<PurgeRule> requested) {
-                tx.executeWithoutResult(status -> super.execute(author, requested));
+            public PurgeUserComments.Purged execute(com.jrobertgardzinski.identity.UserId author,
+                                                    Optional<PurgeRule> requested) {
+                // the report travels back out of the transaction: the caller announces what this
+                // destroyed, and it announces INSIDE the outer transaction this one joined
+                return tx.execute(status -> super.execute(author, requested));
             }
         };
     }

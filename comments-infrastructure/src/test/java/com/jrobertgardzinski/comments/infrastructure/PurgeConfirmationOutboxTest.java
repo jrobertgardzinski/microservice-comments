@@ -71,6 +71,7 @@ class PurgeConfirmationOutboxTest {
 
     private final PurgeCommandsListener listener = new PurgeCommandsListener(
             markForErasure, mock(RestoreUserComments.class), purgeUserComments,
+            new KafkaCommentEvents(db.outbox(), mapper),
             new PurgeConfirmations(db.outbox(), mapper), Observations.silent(), mapper, db.tx());
 
     private OutboxRepublisher republisher() {

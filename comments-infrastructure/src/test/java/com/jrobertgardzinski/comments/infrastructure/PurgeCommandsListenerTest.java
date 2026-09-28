@@ -7,6 +7,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.RestoreUserComments;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -49,12 +51,18 @@ class PurgeCommandsListenerTest {
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final RestoreUserComments restoreUserComments = mock(RestoreUserComments.class);
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
+
+    // a mock answers null where the real use case answers a report of what it destroyed; the
+    // participant announces that report, so the stub is what keeps these tests about the CARRIER
+    {
+        when(purgeUserComments.execute(any(), any())).thenReturn(PurgeUserComments.Purged.NOTHING);
+    }
     private final PurgeConfirmations confirmations = mock(PurgeConfirmations.class);
     private final java.util.List<Observation> observed = new java.util.ArrayList<>();
     private final Observations<Observation> observations = observed::add;
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
-            restoreUserComments, purgeUserComments, confirmations, observations, new ObjectMapper(),
-            NoTransactions.template());
+            restoreUserComments, purgeUserComments, mock(CommentEvents.class), confirmations,
+            observations, new ObjectMapper(), NoTransactions.template());
 
     private final ListAppender<ILoggingEvent> logLines = new ListAppender<>();
 

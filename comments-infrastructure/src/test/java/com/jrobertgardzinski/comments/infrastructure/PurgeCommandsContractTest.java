@@ -11,6 +11,7 @@ import au.com.dius.pact.core.model.annotations.Pact;
 import au.com.dius.pact.core.model.messaging.Message;
 import au.com.dius.pact.core.model.messaging.MessagePact;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jrobertgardzinski.comments.application.CommentEvents;
 import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * The consumer's half of the account-deletion saga contract: the pact states the exact shape of
@@ -51,9 +53,16 @@ import static org.mockito.Mockito.verify;
 class PurgeCommandsContractTest {
 
     private final PurgeUserComments purgeUserComments = mock(PurgeUserComments.class);
+
+    // a mock answers null where the real use case answers a report of what it destroyed; the
+    // participant announces that report, so the stub is what keeps these tests about the CARRIER
+    {
+        when(purgeUserComments.execute(any(), any())).thenReturn(PurgeUserComments.Purged.NOTHING);
+    }
     private final MarkUserCommentsForErasure markForErasure = mock(MarkUserCommentsForErasure.class);
     private final PurgeCommandsListener listener = new PurgeCommandsListener(markForErasure,
-            mock(RestoreUserComments.class), purgeUserComments, new CapturedConfirmations(),
+            mock(RestoreUserComments.class), purgeUserComments, mock(CommentEvents.class),
+            new CapturedConfirmations(),
             Observations.silent(), new ObjectMapper(), NoTransactions.template());
 
     @Pact(consumer = "microservice-comments")
@@ -134,8 +143,8 @@ class PurgeCommandsContractTest {
     void restoresOnTheCompensation(List<Message> messages) throws Exception {
         RestoreUserComments restore = mock(RestoreUserComments.class);
         new PurgeCommandsListener(markForErasure, restore, purgeUserComments,
-                new CapturedConfirmations(), Observations.silent(), new ObjectMapper(),
-                NoTransactions.template())
+                mock(CommentEvents.class), new CapturedConfirmations(), Observations.silent(),
+                new ObjectMapper(), NoTransactions.template())
                 .receive(messages.get(0).contentsAsString(), null);
         verify(restore).execute(any(UserId.class));
     }
