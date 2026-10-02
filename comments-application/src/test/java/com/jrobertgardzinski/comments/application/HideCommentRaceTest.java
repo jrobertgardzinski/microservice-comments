@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.Comment;
 import io.qameta.allure.Epic;

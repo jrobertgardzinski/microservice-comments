@@ -1,9 +1,7 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.domain;
 
 import java.util.Optional;
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.CommentStatus;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -83,12 +81,12 @@ public class FakeCommentErasure implements CommentErasure {
     }
 
     /** Whether this comment is out of its thread right now — what a read-side assertion asks. */
-    protected boolean isMarked(String commentId) {
+    public boolean isMarked(String commentId) {
         return marks.containsKey(commentId);
     }
 
     /** The reservations, for a test that fingerprints the whole world (idempotence). */
-    protected Map<String, Instant> marks() {
+    public Map<String, Instant> marks() {
         return Map.copyOf(marks);
     }
 

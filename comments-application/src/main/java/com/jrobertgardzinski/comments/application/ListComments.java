@@ -1,6 +1,8 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.voting.VoteTally;
 import org.slf4j.Logger;

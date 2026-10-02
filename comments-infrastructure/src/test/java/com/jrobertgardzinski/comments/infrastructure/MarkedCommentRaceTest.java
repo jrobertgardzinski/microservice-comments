@@ -1,9 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.application.CommentErasure;
-import com.jrobertgardzinski.comments.application.CommentRepository;
-import com.jrobertgardzinski.comments.application.CommentVotes;
+import com.jrobertgardzinski.comments.domain.CommentErasure;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
 import com.jrobertgardzinski.comments.application.DeleteThread;
 import com.jrobertgardzinski.comments.application.PurgeUserComments;
 import com.jrobertgardzinski.purge.PurgeRule;

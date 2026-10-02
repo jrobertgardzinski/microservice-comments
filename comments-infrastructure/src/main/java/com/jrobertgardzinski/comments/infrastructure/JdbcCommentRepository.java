@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.CommentRepository;
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 

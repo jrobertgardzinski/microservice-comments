@@ -1,6 +1,5 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.domain;
 
-import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.identity.UserId;
 
 import java.time.Instant;

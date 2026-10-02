@@ -241,6 +241,14 @@
             <artifactId>junit5</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- the port contracts, asked of the JDBC adapters -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.CommentVotes;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
 import org.springframework.boot.test.context.TestConfiguration;

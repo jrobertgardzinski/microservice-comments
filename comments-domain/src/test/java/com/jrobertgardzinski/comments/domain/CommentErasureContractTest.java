@@ -1,6 +1,5 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.domain;
 
-import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.identity.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

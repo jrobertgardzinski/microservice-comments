@@ -1,6 +1,10 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
+import com.jrobertgardzinski.comments.domain.FakeCommentErasure;
+import com.jrobertgardzinski.comments.domain.FakeCommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.Comment;

@@ -1,10 +1,10 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.CommentRepository;
-import com.jrobertgardzinski.comments.application.CommentVotes;
-import com.jrobertgardzinski.comments.application.CommentVotesContractTest;
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
+import com.jrobertgardzinski.comments.domain.CommentVotesContractTest;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.springframework.beans.factory.annotation.Autowired;

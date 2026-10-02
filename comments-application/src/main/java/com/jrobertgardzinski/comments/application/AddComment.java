@@ -1,6 +1,7 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
 
 import java.util.Optional;
 import java.util.UUID;

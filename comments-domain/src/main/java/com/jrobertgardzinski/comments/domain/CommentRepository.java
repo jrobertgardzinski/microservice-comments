@@ -1,6 +1,4 @@
-package com.jrobertgardzinski.comments.application;
-
-import com.jrobertgardzinski.comments.domain.Comment;
+package com.jrobertgardzinski.comments.domain;
 
 import java.util.List;
 import java.util.Optional;

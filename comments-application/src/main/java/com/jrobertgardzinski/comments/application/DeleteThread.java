@@ -1,6 +1,9 @@
 package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.CommentErasure;
+import com.jrobertgardzinski.comments.domain.CommentRepository;
+import com.jrobertgardzinski.comments.domain.CommentVotes;
 
 import java.util.ArrayList;
 import java.util.List;

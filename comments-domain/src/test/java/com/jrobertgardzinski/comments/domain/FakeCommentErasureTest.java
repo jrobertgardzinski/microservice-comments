@@ -1,9 +1,7 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.domain;
 
-import com.jrobertgardzinski.comments.domain.CommentStatus;
 import java.util.Optional;
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.Comment;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 

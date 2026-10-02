@@ -1,5 +1,6 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.domain.CommentErasure;
 import com.jrobertgardzinski.observation.Observations;
 import com.jrobertgardzinski.comments.config.ErasureTolerance;
 import com.jrobertgardzinski.comments.domain.Comment;
