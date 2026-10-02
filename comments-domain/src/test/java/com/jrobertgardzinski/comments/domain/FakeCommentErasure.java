@@ -85,6 +85,21 @@ public class FakeCommentErasure implements CommentErasure {
         return marks.containsKey(commentId);
     }
 
+    /**
+     * The reservation goes with the row it was made against — for whoever destroys that row
+     * ({@link FakeCommentRepository#delete}, {@link FakeCommentRepository#deleteByMeme}).
+     *
+     * <p>Not a convenience: in the schema the status IS a column of the comments row, so a deleted
+     * comment cannot leave a mark behind, and this class keeps the marks in a map of their own only
+     * because every read has to be able to ignore them. Without this call the two part company the
+     * moment anything deletes — and {@code deleteByMeme} is status-blind, exactly like the
+     * adapter's cascade, so a MARKED comment really is destroyed this way — which would leave the
+     * map answering {@link #isMarked} for a comment nothing holds any more.
+     */
+    protected void forgetMark(String commentId) {
+        marks.remove(commentId);
+    }
+
     /** The reservations, for a test that fingerprints the whole world (idempotence). */
     public Map<String, Instant> marks() {
         return Map.copyOf(marks);

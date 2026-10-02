@@ -72,11 +72,16 @@ public class FakeCommentRepository extends FakeCommentErasure implements Comment
     @Override
     public void delete(String commentId) {
         rows.removeIf(row -> row.id().equals(commentId));
+        // the status is a column of the row in the schema, so it goes with it; here the marks live
+        // in a map of their own and have to be told
+        forgetMark(commentId);
     }
 
     @Override
     public void deleteByMeme(String memeId) {
-        rows.removeIf(row -> row.memeId().equals(memeId));
+        List<Comment> doomed = rows.stream().filter(row -> row.memeId().equals(memeId)).toList();
+        rows.removeAll(doomed);
+        doomed.forEach(row -> forgetMark(row.id()));
     }
 
     @Override
