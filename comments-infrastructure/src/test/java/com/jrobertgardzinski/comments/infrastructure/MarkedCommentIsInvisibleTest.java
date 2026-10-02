@@ -2,8 +2,8 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
-import com.jrobertgardzinski.comments.application.RestoreUserComments;
+import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.RestoreUserComments;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;

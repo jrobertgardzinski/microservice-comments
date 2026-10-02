@@ -1,4 +1,4 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.system;
 
 import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentStatus;

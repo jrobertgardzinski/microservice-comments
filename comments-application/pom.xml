@@ -38,11 +38,6 @@
             <artifactId>voting</artifactId>
         </dependency>
         <dependency>
-            <!-- the port a service states its own facts through; the facts themselves stay ours -->
-            <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>observation</artifactId>
-        </dependency>
-        <dependency>
             <!--
               Declared, not inherited. ListComments logs the one thing only it knows — that a vote
               store outage turned a thread into an unscored listing — and until the split it got
@@ -63,6 +58,13 @@
             <artifactId>comments-domain</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- IdempotentCommandsTest drives the taking-down use cases too -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-system</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

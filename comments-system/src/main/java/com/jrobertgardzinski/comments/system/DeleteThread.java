@@ -1,4 +1,4 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.system;
 
 import com.jrobertgardzinski.comments.domain.Comment;
 import com.jrobertgardzinski.comments.domain.CommentErasure;

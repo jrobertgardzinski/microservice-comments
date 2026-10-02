@@ -1,8 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.jrobertgardzinski.comments.application.DeleteThread;
-import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.DeleteThread;
+import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;

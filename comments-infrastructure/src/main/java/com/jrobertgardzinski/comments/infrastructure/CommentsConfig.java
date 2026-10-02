@@ -6,14 +6,14 @@ import com.jrobertgardzinski.comments.application.CommentModeration;
 import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentVotes;
 import com.jrobertgardzinski.comments.application.DeleteComment;
-import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.system.DeleteThread;
 import com.jrobertgardzinski.comments.application.HideComment;
 import com.jrobertgardzinski.comments.application.ListComments;
 import com.jrobertgardzinski.comments.domain.CommentErasure;
-import com.jrobertgardzinski.comments.application.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.application.MemeDirectory;
-import com.jrobertgardzinski.comments.application.RestoreUserComments;
-import com.jrobertgardzinski.comments.application.PurgeUserComments;
+import com.jrobertgardzinski.comments.system.RestoreUserComments;
+import com.jrobertgardzinski.comments.system.PurgeUserComments;
 import com.jrobertgardzinski.comments.application.VoteOnComment;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.config.RateLimit;
@@ -99,12 +99,12 @@ class CommentsConfig {
     }
 
     @Bean
-    com.jrobertgardzinski.comments.application.WatchErasureBacklog watchErasureBacklog(
+    com.jrobertgardzinski.comments.system.WatchErasureBacklog watchErasureBacklog(
             CommentErasure erasure,
             com.jrobertgardzinski.comments.config.ErasureTolerance tolerance,
             com.jrobertgardzinski.observation.Observations<com.jrobertgardzinski.comments.domain.Observation> observations,
             java.time.Clock clock) {
-        return new com.jrobertgardzinski.comments.application.WatchErasureBacklog(
+        return new com.jrobertgardzinski.comments.system.WatchErasureBacklog(
                 erasure, tolerance, observations, clock);
     }
 

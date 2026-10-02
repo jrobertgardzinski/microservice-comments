@@ -1,5 +1,9 @@
 package com.jrobertgardzinski.comments.application;
 
+import com.jrobertgardzinski.comments.system.DeleteThread;
+import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.PurgeUserComments;
+import com.jrobertgardzinski.comments.system.RestoreUserComments;
 import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentStatus;
 import com.jrobertgardzinski.comments.domain.CommentVotes;

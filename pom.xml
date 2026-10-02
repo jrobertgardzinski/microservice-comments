@@ -53,6 +53,7 @@
     <modules>
         <module>comments-domain</module>
         <module>comments-config</module>
+        <module>comments-system</module>
         <module>comments-application</module>
         <module>comments_account-closure</module>
         <module>comments_meme-deletion</module>

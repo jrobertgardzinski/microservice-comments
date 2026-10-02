@@ -2,7 +2,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.system.DeleteThread;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;

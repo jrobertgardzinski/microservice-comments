@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.CommentEvents;
+import com.jrobertgardzinski.comments.domain.CommentEvents;
 import au.com.dius.pact.consumer.MessagePactBuilder;
 import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
@@ -11,7 +11,7 @@ import au.com.dius.pact.core.model.annotations.Pact;
 import au.com.dius.pact.core.model.messaging.Message;
 import au.com.dius.pact.core.model.messaging.MessagePact;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.system.DeleteThread;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;

@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.deletion;
 
-import com.jrobertgardzinski.comments.application.CommentEvents;
-import com.jrobertgardzinski.comments.application.DeleteThread;
+import com.jrobertgardzinski.comments.domain.CommentEvents;
+import com.jrobertgardzinski.comments.system.DeleteThread;
 import com.jrobertgardzinski.deletion.CommentsDeleted;
 import com.jrobertgardzinski.deletion.DeletionOutcome;
 import com.jrobertgardzinski.deletion.MemeDeleted;

@@ -1,4 +1,4 @@
-package com.jrobertgardzinski.comments.application;
+package com.jrobertgardzinski.comments.domain;
 
 import java.util.List;
 

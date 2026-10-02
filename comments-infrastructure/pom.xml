@@ -249,6 +249,12 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- the use cases that take content down -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-system</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.WatchErasureBacklog;
+import com.jrobertgardzinski.comments.system.WatchErasureBacklog;
 import com.jrobertgardzinski.comments.domain.Observation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
