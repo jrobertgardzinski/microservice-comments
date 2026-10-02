@@ -90,7 +90,9 @@ public class FakeCommentErasure implements CommentErasure {
         return Map.copyOf(marks);
     }
 
-    private Comment withMark(Comment comment) {
+    /** The stored comment with its reservation showing — what the repository axis built on
+     *  top of this class ({@link FakeCommentRepository}) answers reads with. */
+    protected Comment withMark(Comment comment) {
         Instant marked = marks.get(comment.id());
         return marked == null
                 ? comment
