@@ -148,8 +148,8 @@ class CommentController {
         }
         boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
         boolean hidden = request.hidden();
-        HideComment.Status status = hideComment.execute(memeId, commentId, hidden, moderator);
-        return switch (status) {
+        HideComment.Result result = hideComment.execute(memeId, commentId, hidden, moderator);
+        return switch (result.status()) {
             case UPDATED -> ResponseEntity.ok(Map.of("status", hidden ? "HIDDEN" : "REVEALED", "id", commentId));
             case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_A_MODERATOR",
                     "detail", "only a moderator can hide a comment"));
@@ -167,8 +167,7 @@ class CommentController {
         if (direction.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("status", "INVALID_DIRECTION"));
         }
-        // the ballot is keyed by the voter's id, in its wire form
-        Optional<VoteTally> tally = voteOnComment.execute(memeId, commentId, voter.toString(), direction.get());
+        Optional<VoteTally> tally = voteOnComment.execute(memeId, commentId, voter, direction.get());
         if (tally.isEmpty()) {
             return ResponseEntity.notFound().build();
         }

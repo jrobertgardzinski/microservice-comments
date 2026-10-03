@@ -15,6 +15,14 @@ public class HideComment {
 
     public enum Status { UPDATED, FORBIDDEN, NO_SUCH_COMMENT }
 
+    /**
+     * The outcome, in the shape its twin {@link DeleteComment} already uses: a record over the
+     * status enum, so this use case can report one more fact about a hide without every caller
+     * having to change. Two use cases that moderate the same comment answered in two different
+     * shapes until this existed.
+     */
+    public record Result(Status status) {}
+
     private final CommentRepository comments;
     private final CommentModeration moderation;
 
@@ -23,9 +31,9 @@ public class HideComment {
         this.moderation = moderation;
     }
 
-    public Status execute(String memeId, String commentId, boolean hidden, boolean callerIsModerator) {
+    public Result execute(String memeId, String commentId, boolean hidden, boolean callerIsModerator) {
         if (!callerIsModerator) {
-            return Status.FORBIDDEN;
+            return new Result(Status.FORBIDDEN);
         }
         // the address is a comment IN a thread, so the thread is part of it: a comment hanging
         // under another meme is not at this address, and confirming a hide against it would have
@@ -33,15 +41,15 @@ public class HideComment {
         Optional<Comment> comment = comments.find(commentId)
                 .filter(found -> found.memeId().equals(memeId));
         if (comment.isEmpty()) {
-            return Status.NO_SUCH_COMMENT;
+            return new Result(Status.NO_SUCH_COMMENT);
         }
         try {
             moderation.setHidden(commentId, hidden);
         } catch (CommentModeration.UnknownComment deletedMidHide) {
             // the comment passed the check above but was deleted before the flag landed (the
             // store's foreign key caught it) — same outcome as failing the check: no such comment
-            return Status.NO_SUCH_COMMENT;
+            return new Result(Status.NO_SUCH_COMMENT);
         }
-        return Status.UPDATED;
+        return new Result(Status.UPDATED);
     }
 }

@@ -2,6 +2,7 @@ package com.jrobertgardzinski.comments.application;
 
 import com.jrobertgardzinski.comments.domain.CommentRepository;
 import com.jrobertgardzinski.comments.domain.CommentVotes;
+import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
 import com.jrobertgardzinski.voting.Voting;
@@ -22,11 +23,17 @@ public class VoteOnComment {
         this.voting = new Voting(commentVotes);
     }
 
-    public Optional<VoteTally> execute(String memeId, String commentId, String voter, VoteDirection direction) {
+    /**
+     * The voter is an id, as everywhere else a use case names a person ({@code DeleteComment} takes
+     * one too): one identity has one shape in this module. The ballot store keys votes by the id in
+     * its WIRE form, so the flattening happens here, at the library's edge — the same place
+     * {@code PurgeUserComments} does it.
+     */
+    public Optional<VoteTally> execute(String memeId, String commentId, UserId voter, VoteDirection direction) {
         try {
             return commentRepository.find(commentId)
                     .filter(comment -> comment.memeId().equals(memeId))
-                    .map(comment -> voting.toggle(commentId, voter, direction));
+                    .map(comment -> voting.toggle(commentId, voter.toString(), direction));
         } catch (CommentVotes.UnknownComment deletedMidVote) {
             // the comment passed the check above but was deleted before the ballot landed (the
             // store's foreign key caught it) — same outcome as failing the check: no such comment

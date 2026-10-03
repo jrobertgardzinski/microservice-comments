@@ -52,6 +52,16 @@ Tylko otwarte rzeczy. Historia = git log.
   przełączone na `.list()` (bliźniaczo w memes `JdbcContentFlags`).
 
 ## Otwarte
+- **Po sprzątaniu 2026-10-03 (przegląd warstw) zostaje do decyzji właściciela:**
+  - `CommentRepository.findByMeme(String)` (bez stron) i `countByMeme` nie mają wołającego w
+    kodzie produkcyjnym — tylko testy, fejki i adapter. Javadoc `countByMeme` i javadoc
+    `ListComments.Page` zapisują POWÓD („no client used the total"), więc to decyzja, nie
+    przeoczenie; usunięcie z portu dotyka 8 plików, czyli nie jest zmianą lokalną. Zostawione.
+  - `comments-application` deklaruje `purge-rule` w scope `compile`, a nazywa go tylko
+    `IdempotentCommandsTest` — czyli zawężenie do scope `test` byłoby poprawne, ale nic nie kupuje
+    (ten sam jar wchodzi i tak przez `comments-system`). Zostawione.
+  - `comments-infrastructure` bierze `observation` i `voting` tranzytywnie, choć nazywa je wprost;
+    jeśli pomy mają być strażnikiem kierunku, te dwie zależności powinny być zadeklarowane.
 - **Kompensacja sagi offboardingu (ADR 0007) — WDROŻONE 2026-08-08.** Komenda czyszczenia
   **oznacza** treści (`PENDING_ERASURE` + `markedForErasureAt`), kasuje dopiero
   `ERASE_USER_CONTENT`, a `RESTORE_USER_CONTENT` cofa oznaczenie. Filtr `ACTIVE` jest w jednym

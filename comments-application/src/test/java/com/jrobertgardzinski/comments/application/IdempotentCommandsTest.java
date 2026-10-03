@@ -53,6 +53,8 @@ class IdempotentCommandsTest {
     private static final UserId ALICE = UserId.random();
     private static final UserId BOB = UserId.random();
 
+    private static final UserId DAVE = UserId.random();
+
     /** A fresh little world per run: two threads, three comments, some votes. */
     private static final class World {
         final List<Comment> comments = new ArrayList<>();
@@ -188,12 +190,12 @@ class IdempotentCommandsTest {
         // read the law above would have taken this command for an oversight and "fixed" it.
         World once = new World();
         new VoteOnComment(once.repository, once.commentVotes)
-                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+                .execute("m1", "c1", DAVE, VoteDirection.UP);
         World twice = new World();
         new VoteOnComment(twice.repository, twice.commentVotes)
-                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+                .execute("m1", "c1", DAVE, VoteDirection.UP);
         new VoteOnComment(twice.repository, twice.commentVotes)
-                .execute("m1", "c1", "dave@example.com", VoteDirection.UP);
+                .execute("m1", "c1", DAVE, VoteDirection.UP);
 
         assertNotEquals(once.fingerprint(), twice.fingerprint(),
                 "the same vote cast twice is a retraction — the exception the ADR must name");

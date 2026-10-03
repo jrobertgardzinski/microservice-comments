@@ -2,29 +2,40 @@
 
 Comment threads under memes, extracted into their own microservice — with **real persistence**
 (Postgres + Flyway; H2 stands in for tests) and voting from the shared **`voting` library**
-(the bounded context: one-vote-per-voter toggle + tally). Spring Boot, hexagon-lite in four
-Maven modules — the estate's layers, the same names its siblings use:
+(the bounded context: one-vote-per-voter toggle + tally). Spring Boot, hexagon-lite in Maven
+modules — the estate's layers, the same names its siblings use, plus one module per cross-service
+process:
 
 | module | what is in it | what it may see |
 | --- | --- | --- |
-| `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK |
-| `comments-config` | the typed dials: purge rule, rate limit, erasure tolerance | the JDK |
-| `comments-application` | the use cases and their ports | domain, config, `voting`, `observation` |
-| `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | application, domain, config, `account-closure` |
+| `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK, `user-id`, `voting` |
+| `comments-config` | the typed dials: rate limit, erasure tolerance | the JDK |
+| `comments-system` | the use cases that take comments DOWN: a whole thread when its meme goes, one leaver's comments wherever they are | domain, config, `user-id`, `purge-rule`, `observation` |
+| `comments-application` | the use cases that put comments UP and read them, and their ports | domain, `user-id`, `voting`, `purge-rule` |
+| `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | system, domain, `account-closure`, `purge-rule`, `unit-of-work`, `observation` |
+| `comments_meme-deletion` | this service's hop of the OTHER cross-service process: a meme goes, so its conversation goes, and whoever held those comments is told which ones | system, domain, `meme-deletion`, `unit-of-work` |
 | `comments-infrastructure` | HTTP, JDBC, Kafka, Flyway, the probes, `main()` | everything |
 
-The underscore in the fifth row is not a typo. `comments-<x>` is a LAYER of this service;
+`comments-domain` sees two libraries and not only the JDK, and both are vocabulary rather than
+machinery: `user-id` is who a comment belongs to, and `voting` is the ballot store a comment's
+tally is read from. Nothing in the domain knows a framework or an I/O call.
+
+The underscore in the last two rows is not a typo. `comments-<x>` is a LAYER of this service;
 `comments_<x>` is this service's part in a process it shares with others, named after the
 library the participants speak through. `memes_account-closure` is the other end of that same
 conversation, and neither of them is a layer. Read it and you know what a closing account does
 to a person's comments — with no Kafka, no database and no Spring in the way.
+
+`comments-system` sits BELOW `comments-application` (2026-10-02): taking content down is reached
+by the saga participants without going through the use cases that put content up, so the
+participants depend on it and not on `comments-application`.
 
 They are modules and not packages because a package boundary is a convention and a classpath is
 not. Until 2026-09-24 this service built ONE artifact that the Spring Boot plugin repackaged, so
 every class of it lived under `BOOT-INF/classes/` and a plain Maven dependency on it put nothing
 on anyone's compile classpath: a monolith assembly — the portal deployed as one process instead
 of six — could take no part of this service at all. Now only `comments-infrastructure` is
-repackaged; the three layers above it are plain, depend-able jars.
+repackaged; every module above it is a plain, depend-able jar.
 
 ## Who it talks to
 

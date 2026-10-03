@@ -29,6 +29,13 @@
             <artifactId>comments-application</artifactId>
         </dependency>
         <dependency>
+            <!-- the dials this module parses the properties into: the rate limit the controller
+                 asks and the erasure tolerance the backlog watch is built with. Declared, not
+                 inherited: this is the module that names them. -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-config</artifactId>
+        </dependency>
+        <dependency>
             <!-- the port contracts: this module holds the REFERENCE implementations, so it is the
                  one whose answers the stand-ins are held to. The version is stated because the
                  reactor's management pins the ordinary jar and a test-jar is a different artifact. -->

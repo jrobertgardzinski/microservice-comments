@@ -22,18 +22,27 @@
       compile classpath. A monolith assembly takes each service's business layers and supplies one
       infrastructure underneath; it could take nothing at all from here.
 
-      The names are the estate's own (memes, offboarding and security use the same four), because
+      The names are the estate's own (memes, offboarding and security use the same ones), because
       the assembly picks layers by name — a service that called its layers something else would not
       slot in.
 
         comments-domain         — the words a comment is made of: the comment itself, its status,
-                                  the leaver, and the facts this service states. Pure JDK
-        comments-config         — typed, validated dials: the purge rule, the rate limit, the
-                                  erasure tolerance. Pure JDK
-        comments-application    — the use cases and the ports they speak through. Framework-free
+                                  the leaver, and the facts this service states. The JDK plus two
+                                  vocabularies, user-id and voting
+        comments-config         — typed, validated dials: the rate limit and the erasure
+                                  tolerance. Pure JDK
+        comments-system         — the use cases that take comments DOWN: a thread when its meme
+                                  goes, a leaver's comments wherever they are. Below application
+                                  and reachable without it (2026-10-02). Framework-free
+        comments-application    — the use cases that put comments up and read them, and the ports
+                                  they speak through. Framework-free
         comments-infrastructure — everything with the outside in it: HTTP, JDBC, Kafka, Flyway,
                                   the probes, and the Spring Boot entry point. THE ONLY MODULE THE
                                   SPRING BOOT PLUGIN REPACKAGES
+
+      Beside the layers, one module per cross-service process — not layers, and the underscore
+      says so: comments_account-closure (what a closing account does to a person's comments) and
+      comments_meme-deletion (this service's hop of the meme-deletion cascade).
     -->
     <properties>
         <maven.compiler.release>25</maven.compiler.release>

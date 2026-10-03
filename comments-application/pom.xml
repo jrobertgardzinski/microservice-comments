@@ -10,8 +10,8 @@
     </parent>
     <artifactId>comments-application</artifactId>
 
-    <!-- Use cases + the ports they speak through. Depends on the domain, the dials and the two
-         shared vocabularies; no framework. -->
+    <!-- Use cases + the ports they speak through. Depends on the domain and the shared
+         vocabularies; no framework, and no dials — nothing here reads configuration. -->
     <dependencies>
         <dependency>
             <!-- the three words that say what becomes of a leaver's content; shared with the
@@ -27,10 +27,6 @@
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>user-id</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-config</artifactId>
         </dependency>
         <dependency>
             <!-- the voting bounded context: toggle semantics + tally, shared with microservice-memes -->
