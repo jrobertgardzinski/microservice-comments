@@ -9,8 +9,8 @@ process:
 | module | what is in it | what it may see |
 | --- | --- | --- |
 | `comments-domain-core` | the comment, its status, the repository, the facts this service states | the JDK, `user-id` |
-| `comments-domain-votes` | the ballot store a comment's tally is read from | the JDK, `user-id`, `voting` |
-| `comments-domain-erasure` | what a leaver's comments go through | domain-core |
+| `comments-domain-votes` | the ballot store a comment's tally is read from | the JDK, `voting` |
+| `comments-domain-erasure` | what a leaver's comments go through | domain-core, `user-id` |
 | `comments-config-core` / `-erasure` | the typed dials: rate limit / erasure tolerance | the JDK |
 | `comments-system-core` | the use case that takes a whole thread DOWN when its meme goes | domain |
 | `comments-system-erasure` | the use cases that take one leaver's comments down wherever they are, and watch the marks | domain, config-erasure, `user-id`, `purge-rule`, `observation` |
