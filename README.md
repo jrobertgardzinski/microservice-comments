@@ -8,15 +8,21 @@ process:
 
 | module | what is in it | what it may see |
 | --- | --- | --- |
-| `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK, `user-id`, `voting` |
-| `comments-config` | the typed dials: rate limit, erasure tolerance | the JDK |
-| `comments-system` | the use cases that take comments DOWN: a whole thread when its meme goes, one leaver's comments wherever they are | domain, config, `user-id`, `purge-rule`, `observation` |
+| `comments-domain-core` | the comment, its status, the repository, the facts this service states | the JDK, `user-id` |
+| `comments-domain-votes` | the ballot store a comment's tally is read from | the JDK, `user-id`, `voting` |
+| `comments-domain-erasure` | what a leaver's comments go through | domain-core |
+| `comments-config-core` / `-erasure` | the typed dials: rate limit / erasure tolerance | the JDK |
+| `comments-system-core` | the use case that takes a whole thread DOWN when its meme goes | domain |
+| `comments-system-erasure` | the use cases that take one leaver's comments down wherever they are, and watch the marks | domain, config-erasure, `user-id`, `purge-rule`, `observation` |
 | `comments-application` | the use cases that put comments UP and read them, and their ports | domain, `user-id`, `voting`, `purge-rule` |
 | `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | system, domain, `account-closure`, `purge-rule`, `unit-of-work`, `observation` |
 | `comments_meme-deletion` | this service's hop of the OTHER cross-service process: a meme goes, so its conversation goes, and whoever held those comments is told which ones | system, domain, `meme-deletion`, `unit-of-work` |
 | `comments-infrastructure` | HTTP, JDBC, Kafka, Flyway, the probes, `main()` | everything |
 
-`comments-domain` sees two libraries and not only the JDK, and both are vocabulary rather than
+Config, domain and system are cut by area, one module per area and layer (2026-10-04), so work
+on one area compiles against what it depends on and nothing else.
+
+The domain sees two libraries and not only the JDK, and both are vocabulary rather than
 machinery: `user-id` is who a comment belongs to, and `voting` is the ballot store a comment's
 tally is read from. Nothing in the domain knows a framework or an I/O call.
 
@@ -26,7 +32,7 @@ library the participants speak through. `memes_account-closure` is the other end
 conversation, and neither of them is a layer. Read it and you know what a closing account does
 to a person's comments — with no Kafka, no database and no Spring in the way.
 
-`comments-system` sits BELOW `comments-application` (2026-10-02): taking content down is reached
+`comments-system-*` sits BELOW `comments-application` (2026-10-02): taking content down is reached
 by the saga participants without going through the use cases that put content up, so the
 participants depend on it and not on `comments-application`.
 
