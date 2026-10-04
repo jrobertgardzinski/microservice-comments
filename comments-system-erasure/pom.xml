@@ -8,24 +8,20 @@
         <artifactId>microservice-comments</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <artifactId>comments_account-closure</artifactId>
+    <artifactId>comments-system-erasure</artifactId>
 
-    <!--
-      This service's side of ONE cross-service process: closing an account. Read this module and
-      you know what happens to a person's comments when they leave — the three commands, which is
-      reversible, whose conditions count — without first deciding whether the portal is a monolith
-      or six services. Nothing in here knows Kafka, HTTP, Spring or a database; the adapter that
-      carries the commands does, and lives next door in comments-infrastructure.
-
-      THE UNDERSCORE IS THE POINT. `comments-<x>` is a LAYER of this service; `comments_<x>` is
-      this service's part in a process it shares with others, named after the library the
-      participants speak through. memes_account-closure is the other end of this same
-      conversation, and neither is a layer.
-    -->
+    <!-- The use cases that take comments down: a whole thread when its meme goes, or one
+         leaver's comments wherever they are. Below the use cases that put comments up, and
+         reachable without them. -->
     <dependencies>
         <dependency>
-            <!-- the three words that say what becomes of a leaver's content; shared with the
-                 twin service that also holds authored content -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-system-core</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- the three words that say what becomes of a leaver's content -->
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>purge-rule</artifactId>
             <version>1.0.0-SNAPSHOT</version>
@@ -36,33 +32,47 @@
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain-votes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
             <artifactId>comments-domain-erasure</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>unit-of-work</artifactId>
+            <artifactId>comments-config-erasure</artifactId>
         </dependency>
         <dependency>
-            <!-- the words the participants and the orchestrator share, including the parsed
-                 command every participant reads -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>account-closure</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <artifactId>user-id</artifactId>
         </dependency>
         <dependency>
+            <!-- the port a service states its own facts through; the facts themselves stay ours -->
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>observation</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
+
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- the use cases that take content down -->
+            <!-- the ports' fakes, beside the ports -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-system-erasure</artifactId>
+            <artifactId>comments-domain-votes</artifactId>
             <version>1.0.0-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- the ports' fakes, beside the ports -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain-erasure</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

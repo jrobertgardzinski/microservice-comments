@@ -22,7 +22,16 @@
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain</artifactId>
+            <artifactId>comments-domain-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain-votes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain-erasure</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
@@ -51,7 +60,15 @@
         <dependency>
             <!-- the ports' fakes, now beside the ports themselves -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain</artifactId>
+            <artifactId>comments-domain-votes</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- the ports' fakes, now beside the ports themselves -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-domain-erasure</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -59,7 +76,14 @@
         <dependency>
             <!-- IdempotentCommandsTest drives the taking-down use cases too -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-system</artifactId>
+            <artifactId>comments-system-core</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- IdempotentCommandsTest drives the taking-down use cases too -->
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>comments-system-erasure</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>

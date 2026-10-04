@@ -24,7 +24,7 @@
     <dependencies>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain</artifactId>
+            <artifactId>comments-domain-core</artifactId>
         </dependency>
         <dependency>
             <!-- the words the three services share when a meme is deleted -->
@@ -43,7 +43,7 @@
         <dependency>
             <!-- the use cases that take content down -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-system</artifactId>
+            <artifactId>comments-system-core</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>

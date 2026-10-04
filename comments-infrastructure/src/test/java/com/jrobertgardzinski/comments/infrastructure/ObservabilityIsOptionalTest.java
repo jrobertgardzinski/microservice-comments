@@ -48,10 +48,19 @@ class ObservabilityIsOptionalTest {
      * The layers that must not name a tool — everything except the adapters. They are sibling
      * MODULES, so the walk starts one directory up: the same three layers, read where they live.
      */
-    private static final List<Path> ABOVE_INFRASTRUCTURE = List.of(
-            Path.of("../comments-domain/src/main/java"),
-            Path.of("../comments-config/src/main/java"),
-            Path.of("../comments-application/src/main/java"));
+    private static List<Path> aboveInfrastructure() throws IOException {
+        // every area's module of the split layers, found by name, so a new area is checked too
+        List<Path> layers = new java.util.ArrayList<>();
+        try (Stream<Path> modules = Files.list(Path.of(".."))) {
+            modules.filter(module -> module.getFileName().toString().matches("comments-(domain|config)-.+"))
+                    .map(module -> module.resolve("src/main/java"))
+                    .filter(Files::isDirectory)
+                    .sorted()
+                    .forEach(layers::add);
+        }
+        layers.add(Path.of("../comments-application/src/main/java"));
+        return layers;
+    }
 
     /**
      * Vendor words, not concepts. {@code observ} is deliberately absent: {@code Observation} and
@@ -64,7 +73,7 @@ class ObservabilityIsOptionalTest {
     @Test
     @DisplayName("no layer above infrastructure names the tool that watches it")
     void the_tool_stays_in_the_adapter() throws IOException {
-        for (Path layer : ABOVE_INFRASTRUCTURE) {
+        for (Path layer : aboveInfrastructure()) {
             try (Stream<Path> tree = Files.walk(layer)) {
                 List<String> leaks = tree
                         .filter(file -> file.toString().endsWith(".java"))

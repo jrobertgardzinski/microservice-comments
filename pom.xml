@@ -60,9 +60,13 @@
     </properties>
 
     <modules>
-        <module>comments-domain</module>
-        <module>comments-config</module>
-        <module>comments-system</module>
+        <module>comments-domain-core</module>
+        <module>comments-domain-votes</module>
+        <module>comments-domain-erasure</module>
+        <module>comments-config-core</module>
+        <module>comments-config-erasure</module>
+        <module>comments-system-core</module>
+        <module>comments-system-erasure</module>
         <module>comments-application</module>
         <module>comments_account-closure</module>
         <module>comments_meme-deletion</module>
@@ -88,12 +92,27 @@
             <!-- this service's own layers: one version, the reactor's -->
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-domain</artifactId>
+                <artifactId>comments-domain-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-config</artifactId>
+                <artifactId>comments-domain-votes</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>comments-domain-erasure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>comments-config-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jrobertgardzinski</groupId>
+                <artifactId>comments-config-erasure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
