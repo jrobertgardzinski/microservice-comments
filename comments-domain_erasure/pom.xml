@@ -8,15 +8,19 @@
         <artifactId>microservice-comments</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <artifactId>comments-domain-votes</artifactId>
+    <artifactId>comments-domain_erasure</artifactId>
 
     <!-- Pure domain: the comment, its status, the leaver, and the facts this service states.
          No framework, no I/O — nothing here but the JDK. -->
     <dependencies>
         <dependency>
-            <!-- CommentVotes speaks in ballots and tallies -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>voting</artifactId>
+            <artifactId>comments-domain_core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>user-id</artifactId>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

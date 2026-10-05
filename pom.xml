@@ -60,13 +60,13 @@
     </properties>
 
     <modules>
-        <module>comments-domain-core</module>
-        <module>comments-domain-votes</module>
-        <module>comments-domain-erasure</module>
-        <module>comments-config-core</module>
-        <module>comments-config-erasure</module>
-        <module>comments-system-core</module>
-        <module>comments-system-erasure</module>
+        <module>comments-domain_core</module>
+        <module>comments-domain_votes</module>
+        <module>comments-domain_erasure</module>
+        <module>comments-config_core</module>
+        <module>comments-config_erasure</module>
+        <module>comments-system_core</module>
+        <module>comments-system_erasure</module>
         <module>comments-application</module>
         <module>comments_account-closure</module>
         <module>comments_meme-deletion</module>
@@ -92,27 +92,27 @@
             <!-- this service's own layers: one version, the reactor's -->
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-domain-core</artifactId>
+                <artifactId>comments-domain_core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-domain-votes</artifactId>
+                <artifactId>comments-domain_votes</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-domain-erasure</artifactId>
+                <artifactId>comments-domain_erasure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-config-core</artifactId>
+                <artifactId>comments-config_core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jrobertgardzinski</groupId>
-                <artifactId>comments-config-erasure</artifactId>
+                <artifactId>comments-config_erasure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

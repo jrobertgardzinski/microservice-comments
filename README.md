@@ -8,12 +8,12 @@ process:
 
 | module | what is in it | what it may see |
 | --- | --- | --- |
-| `comments-domain-core` | the comment, its status, the repository, the facts this service states | the JDK, `user-id` |
-| `comments-domain-votes` | the ballot store a comment's tally is read from | the JDK, `voting` |
-| `comments-domain-erasure` | what a leaver's comments go through | domain-core, `user-id` |
-| `comments-config-core` / `-erasure` | the typed dials: rate limit / erasure tolerance | the JDK |
-| `comments-system-core` | the use case that takes a whole thread DOWN when its meme goes | domain |
-| `comments-system-erasure` | the use cases that take one leaver's comments down wherever they are, and watch the marks | domain, config-erasure, `user-id`, `purge-rule`, `observation` |
+| `comments-domain_core` | the comment, its status, the repository, the facts this service states | the JDK, `user-id` |
+| `comments-domain_votes` | the ballot store a comment's tally is read from | the JDK, `voting` |
+| `comments-domain_erasure` | what a leaver's comments go through | domain-core, `user-id` |
+| `comments-config_core` / `_erasure` | the typed dials: rate limit / erasure tolerance | the JDK |
+| `comments-system_core` | the use case that takes a whole thread DOWN when its meme goes | domain |
+| `comments-system_erasure` | the use cases that take one leaver's comments down wherever they are, and watch the marks | domain, config-erasure, `user-id`, `purge-rule`, `observation` |
 | `comments-application` | the use cases that put comments UP and read them, and their ports | domain, `user-id`, `voting`, `purge-rule` |
 | `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | system, domain, `account-closure`, `purge-rule`, `unit-of-work`, `observation` |
 | `comments_meme-deletion` | this service's hop of the OTHER cross-service process: a meme goes, so its conversation goes, and whoever held those comments is told which ones | system, domain, `meme-deletion`, `unit-of-work` |
@@ -26,13 +26,15 @@ The domain sees two libraries and not only the JDK, and both are vocabulary rath
 machinery: `user-id` is who a comment belongs to, and `voting` is the ballot store a comment's
 tally is read from. Nothing in the domain knows a framework or an I/O call.
 
-The underscore in the last two rows is not a typo. `comments-<x>` is a LAYER of this service;
-`comments_<x>` is this service's part in a process it shares with others, named after the
+The underscores are not typos, and they mark two different things by where they stand.
+`comments-<layer>_<area>` is one area of a LAYER of this service (`comments-domain_erasure`);
+`comments_<x>`, straight after the service's name, is this service's part in a process it shares
+with others, named after the
 library the participants speak through. `memes_account-closure` is the other end of that same
 conversation, and neither of them is a layer. Read it and you know what a closing account does
 to a person's comments — with no Kafka, no database and no Spring in the way.
 
-`comments-system-*` sits BELOW `comments-application` (2026-10-02): taking content down is reached
+`comments-system_*` sits BELOW `comments-application` (2026-10-02): taking content down is reached
 by the saga participants without going through the use cases that put content up, so the
 participants depend on it and not on `comments-application`.
 

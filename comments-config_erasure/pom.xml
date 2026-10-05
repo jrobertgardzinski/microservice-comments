@@ -8,7 +8,7 @@
         <artifactId>microservice-comments</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <artifactId>comments-config-erasure</artifactId>
+    <artifactId>comments-config_erasure</artifactId>
 
     <!-- Typed, validated configuration values: the purge rule's text contract, the per-author rate
          limit, the erasure backlog tolerance. Pure Java, no framework — the properties are parsed

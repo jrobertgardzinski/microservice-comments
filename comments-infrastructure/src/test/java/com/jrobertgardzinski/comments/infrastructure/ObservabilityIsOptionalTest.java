@@ -56,11 +56,11 @@ class ObservabilityIsOptionalTest {
         for (String layer : List.of("domain", "config")) {
             try (Stream<Path> modules = Files.list(Path.of(".."))) {
                 List<Path> areas = modules
-                        .filter(module -> module.getFileName().toString().startsWith("comments-" + layer + "-"))
+                        .filter(module -> module.getFileName().toString().startsWith("comments-" + layer + "_"))
                         .map(module -> module.resolve("src/main/java"))
                         .sorted()
                         .toList();
-                assertFalse(areas.isEmpty(), "no comments-" + layer + "-* module found");
+                assertFalse(areas.isEmpty(), "no comments-" + layer + "_* module found");
                 layers.addAll(areas);
             }
         }

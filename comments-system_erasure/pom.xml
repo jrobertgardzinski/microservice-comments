@@ -8,7 +8,7 @@
         <artifactId>microservice-comments</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
-    <artifactId>comments-system-erasure</artifactId>
+    <artifactId>comments-system_erasure</artifactId>
 
     <!-- The use cases that take comments down: a whole thread when its meme goes, or one
          leaver's comments wherever they are. Below the use cases that put comments up, and
@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-system-core</artifactId>
+            <artifactId>comments-system_core</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
@@ -28,19 +28,19 @@
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain-core</artifactId>
+            <artifactId>comments-domain_core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain-votes</artifactId>
+            <artifactId>comments-domain_votes</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain-erasure</artifactId>
+            <artifactId>comments-domain_erasure</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-config-erasure</artifactId>
+            <artifactId>comments-config_erasure</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jrobertgardzinski</groupId>
@@ -61,7 +61,7 @@
         <dependency>
             <!-- the ports' fakes, beside the ports -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain-votes</artifactId>
+            <artifactId>comments-domain_votes</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -69,7 +69,7 @@
         <dependency>
             <!-- the ports' fakes, beside the ports -->
             <groupId>com.jrobertgardzinski</groupId>
-            <artifactId>comments-domain-erasure</artifactId>
+            <artifactId>comments-domain_erasure</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <type>test-jar</type>
             <scope>test</scope>
