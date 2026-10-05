@@ -15,6 +15,10 @@
          reachable without them. -->
     <dependencies>
         <dependency>
+            <groupId>com.jrobertgardzinski</groupId>
+            <artifactId>voting</artifactId>
+        </dependency>
+        <dependency>
             <!-- the three words that say what becomes of a leaver's content -->
             <groupId>com.jrobertgardzinski</groupId>
             <artifactId>purge-rule</artifactId>

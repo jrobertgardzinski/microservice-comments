@@ -1,12 +1,12 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.CommentErasure;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
 import com.jrobertgardzinski.observation.Observations;
-import com.jrobertgardzinski.comments.system.WatchErasureBacklog;
-import com.jrobertgardzinski.comments.config.ErasureTolerance;
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.Observation;
+import com.jrobertgardzinski.comments.system.erasure.WatchErasureBacklog;
+import com.jrobertgardzinski.comments.config.erasure.ErasureTolerance;
+import com.jrobertgardzinski.comments.domain.core.Comment;
+import com.jrobertgardzinski.comments.domain.erasure.Observation;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;

@@ -1,8 +1,8 @@
 package com.jrobertgardzinski.comments.infrastructure.cucumber;
 
-import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
-import com.jrobertgardzinski.comments.system.PurgeUserComments;
-import com.jrobertgardzinski.comments.system.RestoreUserComments;
+import com.jrobertgardzinski.comments.system.erasure.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
+import com.jrobertgardzinski.comments.system.erasure.RestoreUserComments;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.infrastructure.TestAuthConfig;
 import io.cucumber.java.en.Given;

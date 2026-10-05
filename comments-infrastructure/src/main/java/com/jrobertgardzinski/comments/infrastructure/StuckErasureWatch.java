@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.system.WatchErasureBacklog;
-import com.jrobertgardzinski.comments.domain.Observation;
+import com.jrobertgardzinski.comments.system.erasure.WatchErasureBacklog;
+import com.jrobertgardzinski.comments.domain.erasure.Observation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;

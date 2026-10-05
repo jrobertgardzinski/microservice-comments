@@ -1,10 +1,10 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.domain.CommentEvents;
+import com.jrobertgardzinski.comments.domain.core.CommentEvents;
 import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.system.DeleteThread;
-import com.jrobertgardzinski.comments.application.MemeDirectory;
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.domain.core.MemeDirectory;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;

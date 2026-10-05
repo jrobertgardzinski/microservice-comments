@@ -7,11 +7,11 @@ import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvide
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.domain.CommentEvents;
-import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
-import com.jrobertgardzinski.comments.system.PurgeUserComments;
+import com.jrobertgardzinski.comments.domain.core.CommentEvents;
+import com.jrobertgardzinski.comments.system.erasure.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;
-import com.jrobertgardzinski.comments.system.RestoreUserComments;
+import com.jrobertgardzinski.comments.system.erasure.RestoreUserComments;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.BeforeEach;

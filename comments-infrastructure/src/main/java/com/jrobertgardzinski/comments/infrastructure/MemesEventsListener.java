@@ -2,8 +2,8 @@ package com.jrobertgardzinski.comments.infrastructure;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.domain.CommentEvents;
-import com.jrobertgardzinski.comments.system.DeleteThread;
+import com.jrobertgardzinski.comments.domain.core.CommentEvents;
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
 import com.jrobertgardzinski.comments.deletion.CommentsDeletionParticipant;
 import com.jrobertgardzinski.deletion.DeletionMessages;
 import com.jrobertgardzinski.deletion.MemeDeleted;

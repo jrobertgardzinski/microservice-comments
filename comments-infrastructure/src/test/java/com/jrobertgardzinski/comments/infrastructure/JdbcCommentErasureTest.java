@@ -1,12 +1,12 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.comments.domain.core.CommentStatus;
 import java.util.Optional;
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.CommentErasure;
-import com.jrobertgardzinski.comments.domain.CommentErasureContractTest;
-import com.jrobertgardzinski.comments.domain.CommentRepository;
+import com.jrobertgardzinski.comments.domain.core.Comment;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasureContractTest;
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.springframework.beans.factory.annotation.Autowired;

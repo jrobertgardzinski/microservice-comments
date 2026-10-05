@@ -1,11 +1,11 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.CommentErasure;
-import com.jrobertgardzinski.comments.domain.CommentRepository;
-import com.jrobertgardzinski.comments.domain.CommentVotes;
-import com.jrobertgardzinski.comments.system.DeleteThread;
-import com.jrobertgardzinski.comments.system.PurgeUserComments;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
+import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
 import com.jrobertgardzinski.purge.PurgeRule;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;

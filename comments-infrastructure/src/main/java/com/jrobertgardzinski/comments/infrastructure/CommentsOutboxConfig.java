@@ -1,6 +1,6 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.domain.CommentEvents;
+import com.jrobertgardzinski.comments.domain.core.CommentEvents;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jrobertgardzinski.outbox.OutboxDials;
 import com.jrobertgardzinski.outbox.OutboxRepublisher;

@@ -10,8 +10,8 @@ process:
 | --- | --- | --- |
 | `comments-domain` | the comment, its status, the leaver, the facts this service states | the JDK, `user-id`, `voting` |
 | `comments-config` | the typed dials: rate limit, erasure tolerance | the JDK |
-| `comments-system` | the use cases that take comments DOWN: a whole thread when its meme goes, one leaver's comments wherever they are | domain, config, `user-id`, `purge-rule`, `observation` |
-| `comments-application` | the use cases that put comments UP and read them, and their ports | domain, `user-id`, `voting`, `purge-rule` |
+| `comments-system` | every use case, on the domain: commenting, reading a thread, hiding, deleting and voting on a comment, and taking comments DOWN — a whole thread when its meme goes, one leaver's comments wherever they are | domain, config, `user-id`, `voting`, `purge-rule`, `observation` |
+| `comments-application` | the bridge the controller calls: `CommentService` and `CommentVoteService` take what a caller sent, decide what they may do (the text, the rate, the moderator, the author) and run the use cases | system, domain, config |
 | `comments_account-closure` | this service's part in ONE cross-service process: what happens to a person's comments when they leave | system, domain, `account-closure`, `purge-rule`, `unit-of-work`, `observation` |
 | `comments_meme-deletion` | this service's hop of the OTHER cross-service process: a meme goes, so its conversation goes, and whoever held those comments is told which ones | system, domain, `meme-deletion`, `unit-of-work` |
 | `comments-infrastructure` | HTTP, JDBC, Kafka, Flyway, the probes, `main()` | everything |
@@ -25,6 +25,8 @@ The underscore in the last two rows is not a typo. `comments-<x>` is a LAYER of 
 library the participants speak through. `memes_account-closure` is the other end of that same
 conversation, and neither of them is a layer. Read it and you know what a closing account does
 to a person's comments — with no Kafka, no database and no Spring in the way.
+
+Since 2026-10-05 the layers mean what they mean in `microservice-security`: use cases in system, the bridge in application, the ports (`MemeDirectory`, `CommentModeration` among them) in the domain. Inside every layer the classes sit in one package per area — core, votes, erasure — and `AreaBoundariesTest` holds the graph of which area may import which.
 
 `comments-system` sits BELOW `comments-application` (2026-10-02): taking content down is reached
 by the saga participants without going through the use cases that put content up, so the

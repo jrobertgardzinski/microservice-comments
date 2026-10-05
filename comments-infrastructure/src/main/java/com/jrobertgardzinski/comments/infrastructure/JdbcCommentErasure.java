@@ -1,9 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.CommentErasure;
-import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.comments.domain.core.Comment;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
+import com.jrobertgardzinski.comments.domain.core.CommentStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 

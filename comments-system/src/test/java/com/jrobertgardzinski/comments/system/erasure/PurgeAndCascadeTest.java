@@ -1,0 +1,183 @@
+package com.jrobertgardzinski.comments.system.erasure;
+
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
+
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
+import com.jrobertgardzinski.comments.domain.core.CommentStatus;
+import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.erasure.FakeCommentErasure;
+import com.jrobertgardzinski.comments.domain.votes.FakeCommentVotes;
+import com.jrobertgardzinski.identity.UserId;
+import com.jrobertgardzinski.purge.PurgeRule;
+import com.jrobertgardzinski.comments.domain.core.Comment;
+import com.jrobertgardzinski.voting.VoteDirection;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@Epic("Use case")
+@Feature("Purge and thread cascade")
+class PurgeAndCascadeTest {
+
+    private static final UserId SOMEBODY = UserId.random();
+
+    private static final UserId LEAVER = UserId.random();
+
+    private final List<Comment> comments = new ArrayList<>();
+    private final Map<String, Map<String, VoteDirection>> votes = new HashMap<>();
+
+    private final CommentRepository repository = new CommentRepository() {
+        public void save(Comment comment) {
+            comments.add(comment);
+        }
+
+        public List<Comment> findByMeme(String memeId) {
+            return comments.stream().filter(c -> c.memeId().equals(memeId)).toList();
+        }
+
+        public List<Comment> findByMeme(String memeId, int offset, int limit) {
+            return findByMeme(memeId).stream().skip(offset).limit(limit).toList();
+        }
+
+        public int countByMeme(String memeId) {
+            return findByMeme(memeId).size();
+        }
+
+        public Optional<Comment> find(String commentId) {
+            return comments.stream().filter(c -> c.id().equals(commentId)).findFirst();
+        }
+
+
+        public void delete(String commentId) {
+            comments.removeIf(c -> c.id().equals(commentId));
+        }
+
+        public void deleteByMeme(String memeId) {
+            comments.removeIf(c -> c.memeId().equals(memeId));
+        }
+
+        public void anonymise(String commentId) {
+            comments.replaceAll(c -> c.id().equals(commentId)
+                    ? new Comment(c.id(), c.memeId(), Optional.empty(), c.text(),
+                            CommentStatus.ACTIVE, null) : c);
+        }
+    };
+    private final CommentVotes commentVotes = new FakeCommentVotes(votes);
+
+    private final FakeCommentErasure erasure = new FakeCommentErasure(comments);
+    private final java.time.Clock clock = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-08-08T10:00:00Z"), java.time.ZoneOffset.UTC);
+    private final MarkUserCommentsForErasure mark = new MarkUserCommentsForErasure(erasure, clock);
+    private final RestoreUserComments restore = new RestoreUserComments(erasure);
+
+    @Test
+    @DisplayName("default purge keeps texts as 'deleted account'; KEEP_POPULAR decides by score")
+    void purge_honours_the_rules() {
+        comments.add(new Comment("praised", "m1", Optional.of(LEAVER), "keeper", CommentStatus.ACTIVE, null));
+        comments.add(new Comment("ignored", "m1", Optional.of(LEAVER), "goner", CommentStatus.ACTIVE, null));
+        votes.put("praised", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
+
+        // the saga in full: the reversible mark, then the orchestrator's closure
+        mark.execute(LEAVER);
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
+                .execute(LEAVER, Optional.of(new PurgeRule.KeepPopularAnonymized(1)));
+
+        assertEquals(1, comments.size());
+        assertEquals("keeper", comments.get(0).text());
+        assertEquals(Optional.empty(), comments.get(0).authorId(), "kept, and nobody's");
+        assertTrue(!votes.containsKey("ignored"));
+        assertTrue(!erasure.isMarked("praised"),
+                "a comment the rule keeps belongs back in the thread, not in the erasure backlog");
+    }
+
+    @Test
+    @DisplayName("a comment kept only by the leaver's own vote is not what the community liked")
+    void the_leavers_own_votes_do_not_count_towards_the_threshold() {
+        comments.add(new Comment("self-liked", "m1", Optional.of(LEAVER), "praise from the author", CommentStatus.ACTIVE, null));
+        // two votes, one of them the leaver's own — and his is leaving with him, so the community's
+        // verdict on this comment is ONE. Counting his made the threshold of two look met.
+        votes.put("self-liked", new HashMap<>(Map.of(
+                LEAVER.toString(), VoteDirection.UP, "fan@example.com", VoteDirection.UP)));
+
+        mark.execute(LEAVER);
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.AnonymizeAuthor())
+                .execute(LEAVER, Optional.of(new PurgeRule.KeepPopularAnonymized(2)));
+
+        assertTrue(comments.isEmpty(),
+                "a comment kept only by the leaver's own vote is not what the community liked");
+    }
+
+    @Test
+    @DisplayName("the mark hides the leaver's comments and destroys nothing")
+    void the_mark_is_reversible() {
+        comments.add(new Comment("reserved", "m1", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
+        votes.put("reserved", new HashMap<>(Map.of("fan@example.com", VoteDirection.UP)));
+
+        mark.execute(LEAVER);
+
+        assertTrue(erasure.isMarked("reserved"), "out of the thread");
+        assertEquals(1, comments.size(), "...and still stored");
+        assertEquals(Map.of("fan@example.com", VoteDirection.UP), votes.get("reserved"));
+    }
+
+    @Test
+    @DisplayName("the compensation puts the conversation back exactly as it was")
+    void restore_undoes_the_mark() {
+        comments.add(new Comment("reserved", "m1", Optional.of(LEAVER), "still here", CommentStatus.ACTIVE, null));
+        mark.execute(LEAVER);
+
+        restore.execute(LEAVER);
+
+        assertTrue(!erasure.isMarked("reserved"));
+        assertEquals(Optional.of(LEAVER), comments.get(0).authorId(), "and still theirs");
+        assertEquals("still here", comments.get(0).text());
+    }
+
+    @Test
+    @DisplayName("a closure that arrives without a mark erases nothing")
+    void the_closure_only_acts_on_what_the_mark_reserved() {
+        comments.add(new Comment("never-marked", "m1", Optional.of(LEAVER), "untouched", CommentStatus.ACTIVE, null));
+
+        new PurgeUserComments(repository, erasure, commentVotes, new PurgeRule.Delete())
+                .execute(LEAVER, Optional.empty());
+
+        assertEquals(1, comments.size(),
+                "the erasure acts on the reservation, never on 'everything by that author'");
+    }
+
+    @Test
+    @DisplayName("a deleted meme's whole thread goes, votes included")
+    void thread_cascade() {
+        comments.add(new Comment("c1", "gone-meme", SOMEBODY, "one"));
+        comments.add(new Comment("c2", "gone-meme", SOMEBODY, "two"));
+        comments.add(new Comment("c3", "other", SOMEBODY, "stays"));
+        votes.put("c1", new HashMap<>(Map.of("x@example.com", VoteDirection.UP)));
+
+        List<String> dropped = new DeleteThread(repository, erasure, commentVotes).execute("gone-meme");
+
+        assertEquals(List.of("c3"), comments.stream().map(Comment::id).toList());
+        assertTrue(votes.isEmpty() || !votes.containsKey("c1"));
+        // the cascade also REPORTS what it took: this service is the only one that ever knew which
+        // comments hung under that meme, so the next hop of the choreography rides on this list
+        assertEquals(List.of("c1", "c2"), dropped, "every dropped comment, and no other meme's");
+    }
+
+    @Test
+    @DisplayName("a meme nobody commented on reports nothing to pass on")
+    void thread_cascade_on_an_empty_thread() {
+        comments.add(new Comment("c1", "other", SOMEBODY, "stays"));
+
+        assertEquals(List.of(), new DeleteThread(repository, erasure, commentVotes).execute("quiet-meme"),
+                "no comments went, so there is no fact to announce (and a rerun says the same)");
+    }
+}

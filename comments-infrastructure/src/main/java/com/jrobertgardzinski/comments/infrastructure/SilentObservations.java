@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.observation.Observations;
-import com.jrobertgardzinski.comments.domain.Observation;
+import com.jrobertgardzinski.comments.domain.erasure.Observation;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

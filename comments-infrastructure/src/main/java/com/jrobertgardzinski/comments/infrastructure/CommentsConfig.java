@@ -1,22 +1,22 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
 import com.jrobertgardzinski.observation.Observations;
-import com.jrobertgardzinski.comments.application.AddComment;
-import com.jrobertgardzinski.comments.application.CommentModeration;
-import com.jrobertgardzinski.comments.domain.CommentRepository;
-import com.jrobertgardzinski.comments.domain.CommentVotes;
-import com.jrobertgardzinski.comments.application.DeleteComment;
-import com.jrobertgardzinski.comments.system.DeleteThread;
-import com.jrobertgardzinski.comments.application.HideComment;
-import com.jrobertgardzinski.comments.application.ListComments;
-import com.jrobertgardzinski.comments.domain.CommentErasure;
-import com.jrobertgardzinski.comments.system.MarkUserCommentsForErasure;
-import com.jrobertgardzinski.comments.application.MemeDirectory;
-import com.jrobertgardzinski.comments.system.RestoreUserComments;
-import com.jrobertgardzinski.comments.system.PurgeUserComments;
-import com.jrobertgardzinski.comments.application.VoteOnComment;
+import com.jrobertgardzinski.comments.system.core.AddComment;
+import com.jrobertgardzinski.comments.domain.core.CommentModeration;
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
+import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.system.core.DeleteComment;
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.core.HideComment;
+import com.jrobertgardzinski.comments.system.core.ListComments;
+import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
+import com.jrobertgardzinski.comments.system.erasure.MarkUserCommentsForErasure;
+import com.jrobertgardzinski.comments.domain.core.MemeDirectory;
+import com.jrobertgardzinski.comments.system.erasure.RestoreUserComments;
+import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
+import com.jrobertgardzinski.comments.system.votes.VoteOnComment;
 import com.jrobertgardzinski.purge.PurgeRule;
-import com.jrobertgardzinski.comments.config.RateLimit;
+import com.jrobertgardzinski.comments.config.core.RateLimit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -92,19 +92,19 @@ class CommentsConfig {
     }
 
     @Bean
-    com.jrobertgardzinski.comments.config.ErasureTolerance erasureTolerance(
+    com.jrobertgardzinski.comments.config.erasure.ErasureTolerance erasureTolerance(
             @Value("${comments.erasure.stuck-after-seconds:1800}") long stuckAfterSeconds) {
-        return new com.jrobertgardzinski.comments.config.ErasureTolerance(
+        return new com.jrobertgardzinski.comments.config.erasure.ErasureTolerance(
                 java.time.Duration.ofSeconds(stuckAfterSeconds));
     }
 
     @Bean
-    com.jrobertgardzinski.comments.system.WatchErasureBacklog watchErasureBacklog(
+    com.jrobertgardzinski.comments.system.erasure.WatchErasureBacklog watchErasureBacklog(
             CommentErasure erasure,
-            com.jrobertgardzinski.comments.config.ErasureTolerance tolerance,
-            com.jrobertgardzinski.observation.Observations<com.jrobertgardzinski.comments.domain.Observation> observations,
+            com.jrobertgardzinski.comments.config.erasure.ErasureTolerance tolerance,
+            com.jrobertgardzinski.observation.Observations<com.jrobertgardzinski.comments.domain.erasure.Observation> observations,
             java.time.Clock clock) {
-        return new com.jrobertgardzinski.comments.system.WatchErasureBacklog(
+        return new com.jrobertgardzinski.comments.system.erasure.WatchErasureBacklog(
                 erasure, tolerance, observations, clock);
     }
 
@@ -189,5 +189,21 @@ class CommentsConfig {
                         .allowedMethods("GET", "POST", "PUT", "DELETE");
             }
         };
+    }
+
+    // ---- the application services: the bridge the controller calls, mapped onto beans ----
+
+    @Bean
+    com.jrobertgardzinski.comments.application.core.CommentService commentService(AddComment addComment,
+            com.jrobertgardzinski.comments.system.core.ListComments listComments,
+            com.jrobertgardzinski.comments.system.core.HideComment hideComment,
+            com.jrobertgardzinski.comments.system.core.DeleteComment deleteComment, RateLimit commentRate) {
+        return new com.jrobertgardzinski.comments.application.core.CommentService(addComment, listComments,
+                hideComment, deleteComment, commentRate);
+    }
+
+    @Bean
+    com.jrobertgardzinski.comments.application.votes.CommentVoteService commentVoteService(VoteOnComment voteOnComment) {
+        return new com.jrobertgardzinski.comments.application.votes.CommentVoteService(voteOnComment);
     }
 }

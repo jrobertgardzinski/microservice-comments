@@ -1,13 +1,13 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.system.DeleteThread;
-import com.jrobertgardzinski.comments.domain.CommentStatus;
+import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.domain.core.CommentStatus;
 import com.jrobertgardzinski.identity.UserId;
-import com.jrobertgardzinski.comments.domain.CommentRepository;
-import com.jrobertgardzinski.comments.domain.CommentVotes;
-import com.jrobertgardzinski.comments.application.DeleteComment;
-import com.jrobertgardzinski.comments.system.PurgeUserComments;
-import com.jrobertgardzinski.comments.domain.Comment;
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
+import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.system.core.DeleteComment;
+import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
+import com.jrobertgardzinski.comments.domain.core.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;
 import io.qameta.allure.Epic;

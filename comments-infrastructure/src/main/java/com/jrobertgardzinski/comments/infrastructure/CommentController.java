@@ -1,15 +1,9 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.application.AddComment;
-import com.jrobertgardzinski.comments.application.CommentWithScore;
-import com.jrobertgardzinski.comments.application.DeleteComment;
-import com.jrobertgardzinski.comments.application.HideComment;
-import com.jrobertgardzinski.comments.application.ListComments;
-import com.jrobertgardzinski.comments.application.VoteOnComment;
-import com.jrobertgardzinski.comments.config.RateLimit;
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.voting.VoteDirection;
-import com.jrobertgardzinski.voting.VoteTally;
+import com.jrobertgardzinski.comments.application.core.CommentService;
+import com.jrobertgardzinski.comments.application.votes.CommentVoteService;
+import com.jrobertgardzinski.comments.system.core.CommentWithScore;
+import com.jrobertgardzinski.comments.domain.core.Comment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,47 +44,33 @@ class CommentController {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int DEFAULT_PAGE_SIZE = 50;
 
-    private final AddComment addComment;
-    private final ListComments listComments;
-    private final VoteOnComment voteOnComment;
-    private final DeleteComment deleteComment;
-    private final HideComment hideComment;
-    private final RateLimit commentRate;
+    private final CommentService comments;
+    private final CommentVoteService votes;
+    private final com.jrobertgardzinski.authors.AuthorDirectory authors;
 
-    CommentController(AddComment addComment, ListComments listComments, VoteOnComment voteOnComment,
-                      DeleteComment deleteComment, HideComment hideComment, RateLimit commentRate,
+    CommentController(CommentService comments, CommentVoteService votes,
                       com.jrobertgardzinski.authors.AuthorDirectory authors) {
-        this.addComment = addComment;
-        this.listComments = listComments;
-        this.voteOnComment = voteOnComment;
-        this.deleteComment = deleteComment;
-        this.hideComment = hideComment;
-        this.commentRate = commentRate;
+        this.comments = comments;
+        this.votes = votes;
         this.authors = authors;
     }
-
-    private final com.jrobertgardzinski.authors.AuthorDirectory authors;
 
     @PostMapping
     ResponseEntity<?> add(@PathVariable("memeId") String memeId,
                           @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
                           com.jrobertgardzinski.identity.UserId authorId,
                           @RequestBody CommentRequest request) {
-        if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("status", "INVALID_COMMENT"));
-        }
-        if (request.text().length() > Comment.MAX_LENGTH) {
-            return ResponseEntity.badRequest().body(Map.of("status", "COMMENT_TOO_LONG",
-                    "maxLength", Comment.MAX_LENGTH));
-        }
-        if (!commentRate.tryAcquire(authorId.toString())) {
-            return ResponseEntity.status(429).header("Retry-After", "60")
+        return switch (comments.add(memeId, authorId, request.text())) {
+            case CommentService.Commenting.Added added ->
+                    ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", added.id()));
+            case CommentService.Commenting.Invalid invalid ->
+                    ResponseEntity.badRequest().body(Map.of("status", "INVALID_COMMENT"));
+            case CommentService.Commenting.TooLong tooLong -> ResponseEntity.badRequest().body(Map.of("status", "COMMENT_TOO_LONG",
+                    "maxLength", tooLong.maxLength()));
+            case CommentService.Commenting.RateLimited limited -> ResponseEntity.status(429).header("Retry-After", "60")
                     .body(Map.of("status", "RATE_LIMITED", "detail", "you are commenting too fast"));
-        }
-        return addComment.execute(memeId, authorId, request.text())
-                .<ResponseEntity<?>>map(comment ->
-                        ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", comment.id())))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+            case CommentService.Commenting.NoSuchMeme none -> ResponseEntity.notFound().build();
+        };
     }
 
     @GetMapping
@@ -107,8 +87,7 @@ class CommentController {
         // and both the cap and the number it stands for list nothing. (The gallery's own listing
         // in microservice-memes takes the same care, 1c86a5a.)
         int offset = (int) Math.min((long) Math.max(0, page) * limit, Integer.MAX_VALUE);
-        return listComments.execute(memeId, Optional.ofNullable(viewer), offset, limit)
-                .comments().stream().map(this::toBody).toList();
+        return comments.list(memeId, viewer, offset, limit).stream().map(this::toBody).toList();
     }
 
     private Map<String, Object> toBody(CommentWithScore entry) {
@@ -140,20 +119,14 @@ class CommentController {
                            @RequestBody HideRequest request,
                            @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                    required = false) java.util.Set<String> roles) {
-        if (request.hidden() == null) {
-            // an absent flag is a malformed request, not a request to reveal — refuse it loudly
-            // instead of silently defaulting to false
-            return ResponseEntity.badRequest().body(Map.of("status", "MISSING_HIDDEN",
+        return switch (comments.hide(memeId, commentId, request.hidden(), roles)) {
+            case CommentService.Hiding.Updated updated ->
+                    ResponseEntity.ok(Map.of("status", updated.hidden() ? "HIDDEN" : "REVEALED", "id", commentId));
+            case CommentService.Hiding.MissingHidden missing -> ResponseEntity.badRequest().body(Map.of("status", "MISSING_HIDDEN",
                     "detail", "the body must carry hidden: true or false"));
-        }
-        boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        boolean hidden = request.hidden();
-        HideComment.Result result = hideComment.execute(memeId, commentId, hidden, moderator);
-        return switch (result.status()) {
-            case UPDATED -> ResponseEntity.ok(Map.of("status", hidden ? "HIDDEN" : "REVEALED", "id", commentId));
-            case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_A_MODERATOR",
+            case CommentService.Hiding.NotAModerator notAModerator -> ResponseEntity.status(403).body(Map.of("status", "NOT_A_MODERATOR",
                     "detail", "only a moderator can hide a comment"));
-            case NO_SUCH_COMMENT -> ResponseEntity.notFound().build();
+            case CommentService.Hiding.NoSuchComment none -> ResponseEntity.notFound().build();
         };
     }
 
@@ -163,18 +136,17 @@ class CommentController {
                            @RequestAttribute(RequireSignInFilter.AUTHENTICATED_USER_ID)
                            com.jrobertgardzinski.identity.UserId voter,
                            @RequestBody VoteRequest request) {
-        Optional<VoteDirection> direction = parseDirection(request);
-        if (direction.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("status", "INVALID_DIRECTION"));
-        }
-        Optional<VoteTally> tally = voteOnComment.execute(memeId, commentId, voter, direction.get());
-        if (tally.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        Map<String, Object> body = new HashMap<>();
-        body.put("score", tally.get().score());
-        body.put("myVote", tally.get().voterChoice().map(Enum::name).orElse(null));
-        return ResponseEntity.ok(body);
+        return switch (votes.vote(memeId, commentId, voter, request.direction())) {
+            case CommentVoteService.Vote.InvalidDirection invalid ->
+                    ResponseEntity.badRequest().body(Map.of("status", "INVALID_DIRECTION"));
+            case CommentVoteService.Vote.NoSuchComment none -> ResponseEntity.notFound().build();
+            case CommentVoteService.Vote.Counted counted -> {
+                Map<String, Object> body = new HashMap<>();
+                body.put("score", counted.tally().score());
+                body.put("myVote", counted.tally().voterChoice().map(Enum::name).orElse(null));
+                yield ResponseEntity.ok(body);
+            }
+        };
     }
 
     /** Remove a comment: its author may remove their own, a MODERATOR may remove anyone's. */
@@ -185,14 +157,12 @@ class CommentController {
                              com.jrobertgardzinski.identity.UserId caller,
                              @RequestAttribute(name = RequireSignInFilter.AUTHENTICATED_ROLES,
                                      required = false) java.util.Set<String> roles) {
-        boolean moderator = roles != null && (roles.contains("MODERATOR") || roles.contains("ADMIN"));
-        DeleteComment.Result result = deleteComment.execute(memeId, commentId, caller, moderator);
-        return switch (result.status()) {
-            case DELETED -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
-                    "by", result.byModerator() ? "MODERATOR" : "AUTHOR"));
-            case FORBIDDEN -> ResponseEntity.status(403).body(Map.of("status", "NOT_YOURS",
+        return switch (comments.delete(memeId, commentId, caller, roles)) {
+            case CommentService.Deletion.Deleted deleted -> ResponseEntity.ok(Map.of("status", "DELETED", "id", commentId,
+                    "by", deleted.byModerator() ? "MODERATOR" : "AUTHOR"));
+            case CommentService.Deletion.NotYours notYours -> ResponseEntity.status(403).body(Map.of("status", "NOT_YOURS",
                     "detail", "only the author or a moderator can delete this comment"));
-            case NO_SUCH_COMMENT -> ResponseEntity.notFound().build();
+            case CommentService.Deletion.NoSuchComment none -> ResponseEntity.notFound().build();
         };
     }
 
@@ -207,11 +177,4 @@ class CommentController {
     private static final String DELETED_ACCOUNT = "deleted account";
 
 
-    private static Optional<VoteDirection> parseDirection(VoteRequest request) {
-        try {
-            return Optional.of(VoteDirection.valueOf(String.valueOf(request.direction()).trim().toUpperCase()));
-        } catch (IllegalArgumentException invalid) {
-            return Optional.empty();
-        }
-    }
 }

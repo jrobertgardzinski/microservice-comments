@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.domain.Comment;
-import com.jrobertgardzinski.comments.domain.CommentRepository;
+import com.jrobertgardzinski.comments.domain.core.Comment;
+import com.jrobertgardzinski.comments.domain.core.CommentRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -82,7 +82,7 @@ class JdbcCommentRepository implements CommentRepository {
 
     private Comment toComment(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
         return new Comment(rs.getString("id"), rs.getString("meme_id"), authorIdOf(rs),
-                rs.getString("content"), com.jrobertgardzinski.comments.domain.CommentStatus.ACTIVE, null);
+                rs.getString("content"), com.jrobertgardzinski.comments.domain.core.CommentStatus.ACTIVE, null);
     }
 
     /** Empty for a row written before the id column: the backfill fills those in. */
