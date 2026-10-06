@@ -3,7 +3,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.jrobertgardzinski.comments.domain.core.CommentEvents;
 import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.erasure.DeleteThread;
 import com.jrobertgardzinski.comments.domain.core.MemeDirectory;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

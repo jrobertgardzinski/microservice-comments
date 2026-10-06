@@ -1,4 +1,4 @@
-package com.jrobertgardzinski.comments.domain.votes;
+package com.jrobertgardzinski.comments.domain.core;
 
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;

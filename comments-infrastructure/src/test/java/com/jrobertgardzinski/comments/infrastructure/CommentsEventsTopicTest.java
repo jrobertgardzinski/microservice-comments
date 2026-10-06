@@ -3,7 +3,7 @@ package com.jrobertgardzinski.comments.infrastructure;
 import com.jrobertgardzinski.identity.UserId;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.erasure.DeleteThread;
 import com.jrobertgardzinski.comments.system.erasure.MarkUserCommentsForErasure;
 import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
 import com.jrobertgardzinski.observation.Observations;

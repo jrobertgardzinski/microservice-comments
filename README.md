@@ -26,7 +26,7 @@ library the participants speak through. `memes_account-closure` is the other end
 conversation, and neither of them is a layer. Read it and you know what a closing account does
 to a person's comments — with no Kafka, no database and no Spring in the way.
 
-Since 2026-10-05 the layers mean what they mean in `microservice-security`: use cases in system, the bridge in application, the ports (`MemeDirectory`, `CommentModeration` among them) in the domain. Inside every layer the classes sit in one package per area — core, votes, erasure — and `AreaBoundariesTest` holds the graph of which area may import which.
+Since 2026-10-05 the layers mean what they mean in `microservice-security`: use cases in system, the bridge in application, the ports (`MemeDirectory`, `CommentModeration` among them) in the domain. Inside every layer the classes sit in one package per area — core (the comment and every repository of it), votes, erasure (taking comments down: a leaver's, and a deleted meme's whole thread). An area sees only itself and core, and the layers point down; `AreaIsolationTest` (ArchUnit) checks both on the compiled classes.
 
 `comments-system` sits BELOW `comments-application` (2026-10-02): taking content down is reached
 by the saga participants without going through the use cases that put content up, so the

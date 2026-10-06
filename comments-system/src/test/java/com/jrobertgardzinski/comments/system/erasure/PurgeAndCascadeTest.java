@@ -1,12 +1,11 @@
 package com.jrobertgardzinski.comments.system.erasure;
 
-import com.jrobertgardzinski.comments.system.core.DeleteThread;
 
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
 import com.jrobertgardzinski.comments.domain.core.CommentStatus;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 import com.jrobertgardzinski.comments.domain.erasure.FakeCommentErasure;
-import com.jrobertgardzinski.comments.domain.votes.FakeCommentVotes;
+import com.jrobertgardzinski.comments.domain.core.FakeCommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.purge.PurgeRule;
 import com.jrobertgardzinski.comments.domain.core.Comment;

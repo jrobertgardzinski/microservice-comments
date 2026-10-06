@@ -4,7 +4,7 @@ import com.jrobertgardzinski.comments.domain.core.CommentModeration;
 
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
 import com.jrobertgardzinski.comments.domain.core.CommentStatus;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.core.Comment;
 import com.jrobertgardzinski.voting.VoteDirection;

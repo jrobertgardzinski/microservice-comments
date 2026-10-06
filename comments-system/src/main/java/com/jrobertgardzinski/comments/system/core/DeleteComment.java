@@ -2,7 +2,7 @@ package com.jrobertgardzinski.comments.system.core;
 
 import com.jrobertgardzinski.comments.domain.core.Comment;
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 
 import java.util.Optional;

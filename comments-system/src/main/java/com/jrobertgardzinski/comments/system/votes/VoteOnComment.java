@@ -1,7 +1,7 @@
 package com.jrobertgardzinski.comments.system.votes;
 
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.voting.VoteDirection;
 import com.jrobertgardzinski.voting.VoteTally;

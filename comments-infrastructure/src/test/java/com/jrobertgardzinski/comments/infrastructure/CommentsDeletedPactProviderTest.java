@@ -8,7 +8,7 @@ import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvide
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.erasure.DeleteThread;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.apache.kafka.clients.producer.ProducerRecord;

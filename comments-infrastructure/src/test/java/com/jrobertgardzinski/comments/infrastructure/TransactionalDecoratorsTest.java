@@ -1,10 +1,10 @@
 package com.jrobertgardzinski.comments.infrastructure;
 
-import com.jrobertgardzinski.comments.system.core.DeleteThread;
+import com.jrobertgardzinski.comments.system.erasure.DeleteThread;
 import com.jrobertgardzinski.comments.domain.core.CommentStatus;
 import com.jrobertgardzinski.identity.UserId;
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 import com.jrobertgardzinski.comments.system.core.DeleteComment;
 import com.jrobertgardzinski.comments.system.erasure.PurgeUserComments;
 import com.jrobertgardzinski.comments.domain.core.Comment;

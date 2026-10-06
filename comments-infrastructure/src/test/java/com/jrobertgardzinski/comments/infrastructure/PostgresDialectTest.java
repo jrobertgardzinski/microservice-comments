@@ -225,7 +225,7 @@ class PostgresDialectTest {
                         + " adapter tells the FK apart from the PK race by exactly this");
 
         // and through the adapter's translation: the FK refusal reads as "no such comment"
-        assertThrows(com.jrobertgardzinski.comments.domain.votes.CommentVotes.UnknownComment.class,
+        assertThrows(com.jrobertgardzinski.comments.domain.core.CommentVotes.UnknownComment.class,
                 () -> votes.cast(noSuchComment, "voter@example.com", VoteDirection.UP));
     }
 

@@ -1,9 +1,9 @@
-package com.jrobertgardzinski.comments.system.core;
+package com.jrobertgardzinski.comments.system.erasure;
 
 import com.jrobertgardzinski.comments.domain.core.Comment;
 import com.jrobertgardzinski.comments.domain.erasure.CommentErasure;
 import com.jrobertgardzinski.comments.domain.core.CommentRepository;
-import com.jrobertgardzinski.comments.domain.votes.CommentVotes;
+import com.jrobertgardzinski.comments.domain.core.CommentVotes;
 
 import java.util.ArrayList;
 import java.util.List;
