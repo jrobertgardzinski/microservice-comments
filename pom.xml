@@ -47,7 +47,7 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>4.1.1</spring-boot.version>
+        <spring-boot.version>4.1.2</spring-boot.version>
         <!-- Spring Boot 4's BOM no longer manages these two; pinned here so the build
              stays reproducible rather than resolving whatever is newest. -->
         <rest-assured.version>6.0.1</rest-assured.version>
